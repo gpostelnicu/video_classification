@@ -131,8 +131,9 @@ class Trainer(object):
 
                 encoded = self.encoder(clips)
                 pred_labels = self.decoder(encoded)
+                predicted = torch.max(pred_labels, 1)[1]
 
-                loss = criterion(pred_labels, labels)
+                loss = criterion(predicted, labels)
                 loss.backward()
                 optimizer.step()
 
