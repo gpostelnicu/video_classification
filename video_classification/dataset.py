@@ -1,3 +1,5 @@
+from typing import List
+
 import os
 
 import torch
@@ -6,8 +8,8 @@ from torch.utils import data
 
 
 class VideoFramesDataset(data.Dataset):
-    def __init__(self, base_dir: str, folders: list[str],
-                 labels: list[str], num_frames: int, transform=None):
+    def __init__(self, base_dir: str, folders: List[str],
+                 labels: List[str], num_frames: int, transform=None):
         self.base_dir = base_dir
         self.folders = folders
         self.labels = labels
