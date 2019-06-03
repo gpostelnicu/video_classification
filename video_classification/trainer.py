@@ -63,7 +63,7 @@ class Trainer(object):
     def _load_config(self, config_file):
         with open(config_file) as stream:
             config = yaml.safe_load(stream)
-            self.learning_rate = config['learning_rate']
+            self.learning_rate = float(config['learning_rate'])  # yaml doesn't seem to parse scientific notation.
             self.batch_size = config['batch_size']
             self.encoder_hidden_sizes = config['encoder_hidden_sizes']
 
