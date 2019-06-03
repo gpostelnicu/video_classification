@@ -82,7 +82,7 @@ class Trainer(object):
         predicted = []
         for data in enumerate(data_loader):
             clips, labels = data
-            clips.to_(self.device)
+            clips = clips.to(self.device)
 
             output = self.decoder(self.encoder(clips))
             pred_labels = output.max(1, keepdims=True)[1]
@@ -118,8 +118,8 @@ class Trainer(object):
 
             for i, data in enumerate(train_data_loader):
                 clips, labels = data
-                clips.to_(self.device)
-                labels.to_(self.device)
+                clips = clips.to(self.device)
+                labels = labels.to(self.device)
 
                 optimizer.zero_grad()
 
