@@ -79,10 +79,12 @@ class Trainer(object):
             self.num_labels = config['num_labels']
 
 
-    def accuracy(self, dataset, num_workers=4):
+    def accuracy(self, dataset, num_workers=0):
         self.encoder.eval()
         self.decoder.eval()
-        data_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=num_workers)
+        data_loader = DataLoader(dataset, batch_size=self.batch_size,
+                                 shuffle=False, num_workers=num_workers,
+                                 pin_memory=True)
 
         expected = []
         predicted = []
@@ -113,7 +115,7 @@ class Trainer(object):
         criterion = nn.CrossEntropyLoss()
 
         train_data_loader = DataLoader(self.train_dataset, batch_size=self.batch_size,
-                                       shuffle=True, num_workers=num_workers)
+                                       shuffle=True, num_workers=num_workers, pin_memory=True)
 
         for epoch in range(num_epochs):
             running_loss = 0.0
