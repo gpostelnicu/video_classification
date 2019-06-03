@@ -9,7 +9,7 @@ class ResnetEncoder(nn.Module):
         """
         The last value in the hidden list is the output dimension.
         """
-        super.__init__()
+        super().__init__()
 
         resnet = models.resnet152(pretrained=True)
         modules = list(resnet.children())[:-1]  # Delete last FC layer.
