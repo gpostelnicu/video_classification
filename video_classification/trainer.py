@@ -107,9 +107,8 @@ class Trainer(object):
         decoder_params = list(self.decoder.parameters())
         print('Number of decoder total/trainable params: {}'.format(count_params(decoder_params)))
 
-        optimizer = torch.optim.Adam(
-            encoder_params + decoder_params,
-            lr=self.learning_rate)
+        optimizer = torch.optim.SGD(encoder_params + decoder_params,
+                                    lr=self.learning_rate, momentum=0.9)
 
         criterion = nn.CrossEntropyLoss()
 
@@ -125,15 +124,14 @@ class Trainer(object):
             for i, data in enumerate(train_data_loader):
                 clips, labels = data
                 clips = clips.to(self.device)
-                labels = labels.to(self.device)
+                labels = labels.to(self.device).view(-1,)
 
                 optimizer.zero_grad()
 
                 encoded = self.encoder(clips)
                 pred_labels = self.decoder(encoded)
-                predicted = torch.max(pred_labels, 1)[1]
 
-                loss = criterion(predicted, labels)
+                loss = criterion(pred_labels, labels)
                 loss.backward()
                 optimizer.step()
 
