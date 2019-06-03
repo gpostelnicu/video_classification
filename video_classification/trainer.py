@@ -107,8 +107,8 @@ class Trainer(object):
         decoder_params = list(self.decoder.parameters())
         print('Number of decoder total/trainable params: {}'.format(count_params(decoder_params)))
 
-        optimizer = torch.optim.SGD(encoder_params + decoder_params,
-                                    lr=self.learning_rate, momentum=0.9)
+        optimizer = torch.optim.Adam(encoder_params + decoder_params,
+                                     lr=self.learning_rate)
 
         criterion = nn.CrossEntropyLoss()
 
