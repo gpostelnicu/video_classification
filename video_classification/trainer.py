@@ -14,12 +14,15 @@ from .encoder import ResnetEncoder
 
 def count_params(lst_params: list):
     total_count = 0
+    trainable_count = 0
     for params in lst_params:
         np = 1
         for s in list(params.size()):
             np *= s
         total_count += np
-    return total_count
+        if params.requires_grad:
+            trainable_count += np
+    return total_count, trainable_count
 
 
 class Trainer(object):
@@ -97,9 +100,9 @@ class Trainer(object):
 
     def train(self, num_epochs, num_workers=4, print_every_n=200):
         encoder_params = list(self.encoder.parameters())
-        print('Number of encoder params: {}'.format(count_params(encoder_params)))
+        print('Number of encoder total/trainable params: {}'.format(count_params(encoder_params)))
         decoder_params = list(self.decoder.parameters())
-        print('Number of decoder params: {}'.format(count_params(decoder_params)))
+        print('Number of decoder total/trainable params: {}'.format(count_params(decoder_params)))
 
         optimizer = torch.optim.Adam(
             encoder_params + decoder_params,
