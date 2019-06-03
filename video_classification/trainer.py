@@ -55,21 +55,23 @@ class Trainer(object):
 
         self._load_config(config_file)
 
-        # TODO: use params here.
-        self.encoder = ResnetEncoder()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.encoder = ResnetEncoder(self.encoder_fc_dim1, self.encoder_fc_dim2, self.encoder_out_dim).to(self.device)
         self.decoder = Decoder(
-            input_dim=300, hidden_dim=self.decoder_hidden_dim,
+            input_dim=self.encoder_out_dim, hidden_dim=self.decoder_hidden_dim,
             num_hidden_layers=self.decoder_num_hidden_layers, fc_dim=self.decoder_fc_dim,
             out_dim=self.num_labels
-        )
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        ).to(self.device)
 
     def _load_config(self, config_file):
         with open(config_file) as stream:
             config = yaml.safe_load(stream)
             self.learning_rate = float(config['learning_rate'])  # yaml doesn't seem to parse scientific notation.
             self.batch_size = config['batch_size']
-            self.encoder_hidden_sizes = config['encoder_hidden_sizes']
+            self.encoder_fc_dim1 = config['encoder_fc_dim1']
+            self.encoder_fc_dim2 = config['encoder_fc_dim2']
+            self.encoder_out_dim = config['encoder_out_dim']
 
             self.decoder_hidden_dim = config['decoder_hidden_dim']
             self.decoder_num_hidden_layers = config['decoder_num_hidden_layers']

@@ -14,6 +14,7 @@ class ResnetEncoder(nn.Module):
         for p in self.resnet.parameters():  # Only finetuning, disable training for the base net.
             p.requires_grad = False
 
+        # It seems encoding layers inside a list breaks - understand why.
         self.fc1 = nn.Linear(resnet.fc.in_features, fc_hidden1)
         self.bn1 = nn.BatchNorm1d(fc_hidden1, momentum=0.01)
         self.fc2 = nn.Linear(fc_hidden1, fc_hidden2)

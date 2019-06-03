@@ -8,8 +8,9 @@ decoder_hidden_dim: 512
 decoder_num_hidden_layers: 3
 decoder_fc_dim: 128
 
-encoder_hidden_sizes: [512, 512, 300]
-
+encoder_fc_dim1: 512
+encoder_fc_dim2: 512
+encoder_out_dim: 300
 
 num_labels: 101
 
