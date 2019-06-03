@@ -63,14 +63,14 @@ class Trainer(object):
     def _load_config(self, config_file):
         with open(config_file) as stream:
             config = yaml.safe_load(stream)
-            self.learning_rate = config.learning_rate
-            self.batch_size = config.batch_size
-            self.encoding_hidden_sizes = self.encoding_hidden_sizes
+            self.learning_rate = config['learning_rate']
+            self.batch_size = config['batch_size']
+            self.encoding_hidden_sizes = config['encoding_hidden_sizes']
 
-            self.decoder_hidden_dim = config.decoder_hidden_dim
-            self.decoder_num_hidden_layers = config.decoder_num_hidden_layers
-            self.decoder_fc_dim = config.decoder_fc_dim
-            self.num_labels = config.num_labels
+            self.decoder_hidden_dim = config['decoder_hidden_dim']
+            self.decoder_num_hidden_layers = config['decoder_num_hidden_layers']
+            self.decoder_fc_dim = config['decoder_fc_dim']
+            self.num_labels = config['num_labels']
 
 
     def accuracy(self, dataset, num_workers=4):
