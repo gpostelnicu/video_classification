@@ -52,9 +52,9 @@ class Trainer(object):
 
         self._load_config(config_file)
 
-        self.encoder = ResnetEncoder(self.encoding_hidden_sizes)
+        self.encoder = ResnetEncoder(self.encoder_hidden_sizes)
         self.decoder = Decoder(
-            input_dim=self.encoding_hidden_sizes[-1], hidden_dim=self.decoder_hidden_dim,
+            input_dim=self.encoder_hidden_sizes[-1], hidden_dim=self.decoder_hidden_dim,
             num_hidden_layers=self.decoder_num_hidden_layers, fc_dim=self.decoder_fc_dim,
             out_dim=self.num_labels
         )
@@ -65,7 +65,7 @@ class Trainer(object):
             config = yaml.safe_load(stream)
             self.learning_rate = config['learning_rate']
             self.batch_size = config['batch_size']
-            self.encoding_hidden_sizes = config['encoding_hidden_sizes']
+            self.encoder_hidden_sizes = config['encoder_hidden_sizes']
 
             self.decoder_hidden_dim = config['decoder_hidden_dim']
             self.decoder_num_hidden_layers = config['decoder_num_hidden_layers']
