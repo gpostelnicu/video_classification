@@ -13,9 +13,9 @@ class ResnetEncoder(nn.Module):
 
         resnet = models.resnet152(pretrained=True)
         modules = list(resnet.children())[:-1]  # Delete last FC layer.
-        for m in modules:
-            m.requires_grad = False
         self.resnet = nn.Sequential(*modules)
+        for p in self.resnet.parameters():  # Only finetuning, disable training for the base net.
+            p.requires_grad = False
 
         self.fc_layers = []
         self.bn_layers = []
