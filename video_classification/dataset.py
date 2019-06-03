@@ -52,7 +52,7 @@ def read_list_file(list_fname: str):
     labels = []
 
     with open(list_fname) as fh:
-        for line in fh.readline():
+        for line in fh.readlines():
             parts = line.split()
             clips.append(parts[0])
             labels.append(int(parts[1]))
