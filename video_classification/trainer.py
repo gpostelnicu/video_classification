@@ -25,7 +25,7 @@ def count_params(lst_params: list):
 class Trainer(object):
     def __init__(self, base_dir: str,
                  train_list_file: str, test_list_file: str,
-                 config_file: str, target_size=224):
+                 config_file: str, target_size=224, num_frames=29):
         train_clips, train_labels = read_list_file(train_list_file)
         test_clips, test_labels = read_list_file(test_list_file)
 
@@ -44,9 +44,11 @@ class Trainer(object):
         ])
 
         self.train_dataset = VideoFramesDataset(
-            base_dir=base_dir, folders=train_clips, labels=train_labels, transform=train_transform)
+            base_dir=base_dir, folders=train_clips, labels=train_labels,
+            num_frames=num_frames, transform=train_transform)
         self.test_dataset = VideoFramesDataset(
-            base_dir=base_dir, folders=test_clips, labels=test_labels, transform=eval_transform)
+            base_dir=base_dir, folders=test_clips, labels=test_labels,
+            num_frames=num_frames, transform=eval_transform)
 
         self._load_config(config_file)
 
