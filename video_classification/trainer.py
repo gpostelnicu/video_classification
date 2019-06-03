@@ -55,9 +55,10 @@ class Trainer(object):
 
         self._load_config(config_file)
 
-        self.encoder = ResnetEncoder(self.encoder_hidden_sizes)
+        # TODO: use params here.
+        self.encoder = ResnetEncoder()
         self.decoder = Decoder(
-            input_dim=self.encoder_hidden_sizes[-1], hidden_dim=self.decoder_hidden_dim,
+            input_dim=300, hidden_dim=self.decoder_hidden_dim,
             num_hidden_layers=self.decoder_num_hidden_layers, fc_dim=self.decoder_fc_dim,
             out_dim=self.num_labels
         )
