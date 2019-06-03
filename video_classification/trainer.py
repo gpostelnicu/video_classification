@@ -126,7 +126,9 @@ class Trainer(object):
 
                 optimizer.zero_grad()
 
-                pred_labels = self.decoder(self.encoder(clips))
+                encoded = self.encoder(clips)
+                pred_labels = self.decoder(encoded)
+
                 loss = criterion(pred_labels, labels)
                 loss.backward()
                 optimizer.step()
