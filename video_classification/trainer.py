@@ -115,8 +115,9 @@ class Trainer(object):
         train_data_loader = DataLoader(self.train_dataset, batch_size=self.batch_size,
                                        shuffle=True, num_workers=num_workers)
 
-        running_loss = 0.0
         for epoch in range(num_epochs):
+            running_loss = 0.0
+            count = 0
             # Set models in training mode - for batch norm or dropout.
             self.encoder.train()
             self.decoder.train()
@@ -136,9 +137,11 @@ class Trainer(object):
                 optimizer.step()
 
                 running_loss += loss.item()
+                count += 1
                 if (i + 1) % print_every_n == 0:
-                    print('epoch {}, step {}: loss {}'.format(epoch, i, running_loss))
+                    print('epoch {}, step {}: loss {}'.format(epoch, i, running_loss / count))
                     running_loss = 0.0
+                    count = 0
 
             print('Computing accuracy')
             accuracy = self.accuracy(self.test_dataset, num_workers)
