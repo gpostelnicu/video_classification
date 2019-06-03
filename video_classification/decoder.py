@@ -4,7 +4,7 @@ import torch.functional as F
 
 class Decoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, num_hidden_layers, fc_dim, out_dim):
-        super.__init__()
+        super().__init__()
 
         self.lstm = nn.LSTM(
             input_size=input_dim,
