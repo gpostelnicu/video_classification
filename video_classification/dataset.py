@@ -39,7 +39,7 @@ class VideoFramesDataset(data.Dataset):
             # TODO: make random components of transform constant for frame.
             if self.transform is not None:
                 im = self.transform(im)
-            x.append(im.squeeze_(0))
+            x.append(im)
         x = torch.stack(x, dim=0)
         return x
 
