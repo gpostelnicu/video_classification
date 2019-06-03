@@ -26,7 +26,7 @@ class VideoFramesDataset(data.Dataset):
         label = self.labels[index]
 
         x = self._read_images(folder)
-        y = torch.LongTensor([label])
+        y = torch.LongTensor([label - 1])  # Make output label 0-based.
 
         return x, y
 
