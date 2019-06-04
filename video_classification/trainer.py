@@ -90,7 +90,7 @@ class Trainer(object):
         predicted = []
         for i, data in enumerate(data_loader):
             clips, labels = data
-            clips = clips.to(self.device).view(-1, )
+            clips = clips.to(self.device)
 
             output = self.decoder(self.encoder(clips))
             pred_labels = output.max(1, keepdims=True)[1]

@@ -9,13 +9,12 @@ from torch.utils import data
 
 class VideoFramesDataset(data.Dataset):
     def __init__(self, base_dir: str, folders: List[str],
-                 labels: List[str], num_frames: int, transform=None):
+                 labels: List[int], num_frames: int, transform=None):
         self.base_dir = base_dir
         self.folders = folders
         self.labels = labels
         self.num_frames = num_frames
         self.transform = transform
-
         assert len(self.folders) == len(self.labels)
 
     def __len__(self):
@@ -27,7 +26,6 @@ class VideoFramesDataset(data.Dataset):
 
         x = self._read_images(folder)
         y = torch.LongTensor([label - 1])  # Make output label 0-based.
-
         return x, y
 
     def _read_images(self, folder: str):
@@ -40,6 +38,7 @@ class VideoFramesDataset(data.Dataset):
             if self.transform is not None:
                 im = self.transform(im)
             x.append(im)
+
         x = torch.stack(x, dim=0)
         return x
 
