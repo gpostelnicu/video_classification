@@ -126,6 +126,10 @@ class Trainer(object):
 
             for i, data in enumerate(train_data_loader):
                 clips, labels = data
+                # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
+                if clips.size(0) < 2:
+                    print('Encountered minibatch of size 1. Skipping.')
+                    continue
                 clips = clips.to(self.device)
                 labels = labels.to(self.device).view(-1,)
 
