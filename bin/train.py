@@ -3,10 +3,10 @@ import argparse
 from video_classification.trainer import Trainer
 
 
-def main(base_dir, train_list_file, test_list_file, config_file, save_prefix, num_epochs):
+def main(base_dir, train_list_file, test_list_file, config_file, save_prefix, num_epochs, num_workers):
     trainer = Trainer(base_dir=base_dir, train_list_file=train_list_file, test_list_file=test_list_file,
                       config_file=config_file)
-    trainer.train(save_prefix=save_prefix, num_epochs=num_epochs)
+    trainer.train(save_prefix=save_prefix, num_epochs=num_epochs, num_workers=num_workers)
 
 
 if __name__ == '__main__':
@@ -17,7 +17,9 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True)
     parser.add_argument('--save_prefix', required=True)
     parser.add_argument('--num_epochs', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default=0)
 
     args = parser.parse_args()
 
-    main(args.base_dir, args.train_list, args.test_list, args.config, args.save_prefix, args.num_epochs)
+    main(args.base_dir, args.train_list, args.test_list, args.config, args.save_prefix,
+         args.num_epochs, args.num_workers)
