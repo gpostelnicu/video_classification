@@ -42,7 +42,7 @@ class Trainer(object):
             basic_tranform
         ])
         eval_transform = transforms.Compose([
-            transforms.Resize(target_size),
+            transforms.Resize([target_size, target_size]),
             basic_tranform
         ])
 
@@ -93,7 +93,7 @@ class Trainer(object):
             clips = clips.to(self.device)
 
             output = self.decoder(self.encoder(clips))
-            pred_labels = output.max(1, keepdims=True)[1]
+            pred_labels = output.max(1)[1]
 
             expected.extend(labels)
             predicted.extend(pred_labels)
@@ -151,7 +151,8 @@ class Trainer(object):
                     count = 0
 
             print('Computing accuracy')
-            accuracy = self.accuracy(self.test_dataset, num_workers)
+            with torch.no_grad():
+                accuracy = self.accuracy(self.test_dataset, num_workers)
             print('Test accuracy: {}'.format(accuracy))
             if accuracy > best:
                 print('Saving')
