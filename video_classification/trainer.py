@@ -103,7 +103,7 @@ class Trainer(object):
         score = accuracy_score(expected.cpu().squeeze().numpy(), predicted.cpu().squeeze().numpy())
         return score
 
-    def train(self, save_prefix, num_epochs, num_workers=4, print_every_n=200):
+    def train(self, save_prefix, num_epochs, num_workers=0, print_every_n=200):
         encoder_params = list(self.encoder.parameters())
         print('Number of encoder total/trainable params: {}'.format(count_params(encoder_params)))
         decoder_params = list(self.decoder.parameters())
