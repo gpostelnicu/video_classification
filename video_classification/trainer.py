@@ -88,7 +88,7 @@ class Trainer(object):
 
         expected = []
         predicted = []
-        for data in enumerate(data_loader):
+        for i, data in enumerate(data_loader):
             clips, labels = data
             clips = clips.to(self.device).view(-1, )
 
