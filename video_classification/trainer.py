@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import DataLoader
 
-from .dataset import VideoFramesDataset, ds_islice
+from .dataset import VideoFramesDataset, ds_islice, SampledDataset
 from .decoder import Decoder
 from .encoder import ResnetEncoder
 
@@ -121,6 +121,7 @@ class Trainer(object):
 
         train_data_loader = DataLoader(self.train_dataset, batch_size=self.batch_size,
                                        shuffle=True, num_workers=num_workers, pin_memory=True)
+        sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
 
         best = -1.
         for epoch in range(num_epochs):
@@ -161,8 +162,7 @@ class Trainer(object):
 
             print('Computing model performance.')
             with torch.no_grad():
-                train_accuracy, train_loss = self.peformance(
-                    ds_islice(self.train_dataset, self.performance_train_max_items), num_workers)
+                train_accuracy, train_loss = self.peformance(sampled_train_ds, num_workers)
                 print('Train performance: accuracy={} loss={}'.format(train_accuracy, train_loss))
                 test_accuracy, test_loss = self.peformance(self.test_dataset, num_workers)
                 print('Test performance: accuracy={} loss={}'.format(test_accuracy, test_loss))
@@ -172,8 +172,3 @@ class Trainer(object):
                 torch.save(self.encoder.state_dict(), '{}_encoder.pth'.format(save_prefix))
                 torch.save(self.decoder.state_dict(), '{}_decoder.pth'.format(save_prefix))
                 best = test_accuracy
-
-
-
-
-

@@ -1,3 +1,4 @@
+import random
 from typing import List
 
 import os
@@ -8,7 +9,22 @@ from torch.utils import data
 from torch.utils.data import DataLoader
 
 
-def ds_islice(ds, stop):
+class SampledDataset(data.Dataset):
+    def __init__(self, ds, sample_size):
+        if sample_size < 0 or sample_size > len(ds):
+            raise ValueError("Illegal value sample_size={} should be in range [0, {}]".format(
+                sample_size, len(ds)))
+        self.indices = random.sample(range(len(ds)), sample_size)
+        self.ds = ds
+
+    def __len__(self):
+        return len(self.indices)
+
+    def __getitem__(self, item):
+        return self.ds[self.indices[item]]
+
+
+def ds_islice(ds, stop, shuffle=False):
     class Ds(data.Dataset):
         def __init__(self, ds, stop):
             self.ds = ds
