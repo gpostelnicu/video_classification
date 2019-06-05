@@ -1,6 +1,7 @@
 import torch
 import yaml
 
+import numpy as np
 from sklearn.metrics import accuracy_score
 
 import torchvision.transforms as transforms
@@ -29,9 +30,6 @@ class Trainer(object):
     def __init__(self, base_dir: str,
                  train_list_file: str, test_list_file: str,
                  config_file: str, target_size=224, num_frames=29):
-        train_clips, train_labels = read_list_file(train_list_file)
-        test_clips, test_labels = read_list_file(test_list_file)
-
         # Resnet normalization, see https://github.com/pytorch/vision/issues/39
         basic_tranform = transforms.Compose([
             transforms.ToTensor(),
@@ -46,12 +44,13 @@ class Trainer(object):
             basic_tranform
         ])
 
-        self.train_dataset = VideoFramesDataset(
-            base_dir=base_dir, folders=train_clips, labels=train_labels,
-            num_frames=num_frames, transform=train_transform)
-        self.test_dataset = VideoFramesDataset(
-            base_dir=base_dir, folders=test_clips, labels=test_labels,
-            num_frames=num_frames, transform=eval_transform)
+        self.train_dataset = VideoFramesDataset.from_list(
+            base_dir=base_dir, fname=train_list_file, num_frames=num_frames, transform=train_transform
+        )
+
+        self.test_dataset = VideoFramesDataset.from_list(
+            base_dir=base_dir, fname=test_list_file, num_frames=num_frames, transform=eval_transform
+        )
 
         self._load_config(config_file)
 
@@ -78,8 +77,7 @@ class Trainer(object):
             self.decoder_fc_dim = config['decoder_fc_dim']
             self.num_labels = config['num_labels']
 
-
-    def accuracy(self, dataset, num_workers=0):
+    def peformance(self, dataset, num_workers=0):
         self.encoder.eval()
         self.decoder.eval()
         data_loader = DataLoader(dataset, batch_size=self.batch_size,
@@ -88,20 +86,25 @@ class Trainer(object):
 
         expected = []
         predicted = []
+        losses = []
+        criterion = nn.CrossEntropyLoss()
         for i, data in enumerate(data_loader):
             clips, labels = data
             clips = clips.to(self.device)
 
             output = self.decoder(self.encoder(clips))
             pred_labels = output.max(1)[1]
+            loss = criterion(output, labels.to(self.device).view(-1, ))
 
             expected.extend(labels)
             predicted.extend(pred_labels)
+            losses.append(loss.item())
 
         expected = torch.stack(expected, dim=0)
         predicted = torch.stack(predicted, dim=0)
         score = accuracy_score(expected.cpu().squeeze().numpy(), predicted.cpu().squeeze().numpy())
-        return score
+        loss = np.mean(losses)
+        return score, loss
 
     def train(self, save_prefix, num_epochs, num_workers=0, print_every_n=200):
         encoder_params = list(self.encoder.parameters())
@@ -134,12 +137,16 @@ class Trainer(object):
                 clips = clips.to(self.device)
                 labels = labels.to(self.device).view(-1,)
 
+                # 1. Clear previously set gradients.
                 optimizer.zero_grad()
 
+                # 2. Forward pass.
                 encoded = self.encoder(clips)
                 pred_labels = self.decoder(encoded)
 
                 loss = criterion(pred_labels, labels)
+
+                # 3. Backprop.
                 loss.backward()
                 optimizer.step()
 
@@ -150,14 +157,18 @@ class Trainer(object):
                     running_loss = 0.0
                     count = 0
 
-            print('Computing accuracy')
+            print('Computing model performance.')
             with torch.no_grad():
-                accuracy = self.accuracy(self.test_dataset, num_workers)
-            print('Test accuracy: {}'.format(accuracy))
-            if accuracy > best:
+                train_accuracy, train_loss = self.peformance(self.train_dataset, num_workers)
+                print('Train performance: accuracy={} loss={}'.format(train_accuracy, train_loss))
+                test_accuracy, test_loss = self.peformance(self.test_dataset, num_workers)
+                print('Test performance: accuracy={} loss={}'.format(test_accuracy, test_loss))
+
+            if test_accuracy > best:
                 print('Saving')
                 torch.save(self.encoder.state_dict(), '{}_encoder.pth'.format(save_prefix))
                 torch.save(self.decoder.state_dict(), '{}_decoder.pth'.format(save_prefix))
+                best = test_accuracy
 
 
 
