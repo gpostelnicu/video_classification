@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import DataLoader
 
-from .dataset import read_list_file, VideoFramesDataset
+from .dataset import VideoFramesDataset
 from .decoder import Decoder
 from .encoder import ResnetEncoder
 
