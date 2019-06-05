@@ -8,6 +8,23 @@ from torch.utils import data
 from torch.utils.data import DataLoader
 
 
+def ds_islice(ds, stop):
+    class Ds(data.Dataset):
+        def __init__(self, ds, stop):
+            self.ds = ds
+            self.stop = stop
+
+        def __len__(self):
+            return min(len(self.ds), self.stop)
+
+        def __getitem__(self, item):
+            return self.ds[item]
+
+    if stop < 0:  # no-op
+        return ds
+    return Ds(ds, stop)
+
+
 class VideoFramesDataset(data.Dataset):
     def __init__(self, base_dir: str, folders: List[str],
                  labels: List[int], num_files: int,

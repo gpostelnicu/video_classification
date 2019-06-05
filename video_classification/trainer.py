@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import DataLoader
 
-from .dataset import VideoFramesDataset
+from .dataset import VideoFramesDataset, ds_islice
 from .decoder import Decoder
 from .encoder import ResnetEncoder
 
@@ -76,6 +76,8 @@ class Trainer(object):
             self.decoder_num_hidden_layers = config['decoder_num_hidden_layers']
             self.decoder_fc_dim = config['decoder_fc_dim']
             self.num_labels = config['num_labels']
+
+            self.performance_train_max_items = config.get('performance_train_max_items', -1)
 
     def peformance(self, dataset, num_workers=0):
         self.encoder.eval()
@@ -159,7 +161,8 @@ class Trainer(object):
 
             print('Computing model performance.')
             with torch.no_grad():
-                train_accuracy, train_loss = self.peformance(self.train_dataset, num_workers)
+                train_accuracy, train_loss = self.peformance(
+                    ds_islice(self.train_dataset, self.performance_train_max_items), num_workers)
                 print('Train performance: accuracy={} loss={}'.format(train_accuracy, train_loss))
                 test_accuracy, test_loss = self.peformance(self.test_dataset, num_workers)
                 print('Test performance: accuracy={} loss={}'.format(test_accuracy, test_loss))

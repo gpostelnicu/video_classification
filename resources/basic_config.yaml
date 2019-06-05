@@ -14,3 +14,5 @@ encoder_out_dim: 300
 
 num_labels: 101
 
+performance_train_max_items: 1000
+
