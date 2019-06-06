@@ -161,7 +161,7 @@ class Trainer(object):
                 if (i + 1) % print_every_n == 0:
                     end_time = time.time()
                     delta_seconds = end_time - start_time
-                    print('epoch {}, step {}: loss {}, total time: {} time per image: {}'.format(
+                    print('epoch {}, step {}: loss {}, total time: {} time per sample: {}'.format(
                         epoch, i, running_loss / count, delta_seconds, delta_seconds / (self.batch_size * count)))
                     running_loss = 0.0
                     count = 0
