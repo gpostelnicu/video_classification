@@ -1,3 +1,5 @@
+import time
+
 import torch
 import yaml
 
@@ -127,6 +129,7 @@ class Trainer(object):
         for epoch in range(num_epochs):
             running_loss = 0.0
             count = 0
+            start_time = time.time()
             # Set models in training mode - for batch norm or dropout.
             self.encoder.train()
             self.decoder.train()
@@ -156,9 +159,13 @@ class Trainer(object):
                 running_loss += loss.item()
                 count += 1
                 if (i + 1) % print_every_n == 0:
-                    print('epoch {}, step {}: loss {}'.format(epoch, i, running_loss / count))
+                    end_time = time.time()
+                    delta_seconds = end_time - start_time
+                    print('epoch {}, step {}: loss {}, total time: {} time per image: {}'.format(
+                        epoch, i, running_loss / count, delta_seconds, delta_seconds / (self.batch_size * count)))
                     running_loss = 0.0
                     count = 0
+                    start_time = time.time()
 
             print('Computing model performance.')
             with torch.no_grad():
