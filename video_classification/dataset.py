@@ -116,7 +116,7 @@ def collate_fn(data):
 
     # Merge images (from tuple of 4D tensor to 5D tensor).
     lengths = [x.size(0) for x in clips]
-    clips = torch.nn.utils.rnn.pad_sequence(clips).transpose(0, 1)
+    clips = torch.nn.utils.rnn.pad_sequence(clips, batch_first=True)
     labels = torch.stack(labels, 0)
 
     return clips, labels, lengths
