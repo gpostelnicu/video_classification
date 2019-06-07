@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch import nn
 from torch.utils.data import DataLoader
 
-from .dataset import VideoFramesDataset, ds_islice, SampledDataset
+from .dataset import VideoFramesDataset, ds_islice, SampledDataset, SimpleLoaderMaker, loader_from_dataset
 from .decoder import Decoder
 from .encoder import ResnetEncoder
 
@@ -38,7 +38,7 @@ class Trainer(object):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         train_transform = transforms.Compose([
-            transforms.RandomCrop(target_size),
+            transforms.RandomResizedCrop(target_size, scale=(.9, 1.)),
             basic_tranform
         ])
         eval_transform = transforms.Compose([
@@ -84,16 +84,15 @@ class Trainer(object):
     def peformance(self, dataset, num_workers=0):
         self.encoder.eval()
         self.decoder.eval()
-        data_loader = DataLoader(dataset, batch_size=self.batch_size,
-                                 shuffle=False, num_workers=num_workers,
-                                 pin_memory=True)
+        data_loader = loader_from_dataset(dataset=dataset, batch_size=self.batch_size,
+                                          shuffle=False, num_workers=num_workers)
 
         expected = []
         predicted = []
         losses = []
         criterion = nn.CrossEntropyLoss()
         for i, data in enumerate(data_loader):
-            clips, labels = data
+            clips, labels, _ = data
             clips = clips.to(self.device)
 
             output = self.decoder(self.encoder(clips))
@@ -121,8 +120,8 @@ class Trainer(object):
 
         criterion = nn.CrossEntropyLoss()
 
-        train_data_loader = DataLoader(self.train_dataset, batch_size=self.batch_size,
-                                       shuffle=True, num_workers=num_workers, pin_memory=True)
+        train_data_loader = loader_from_dataset(dataset=self.train_dataset, batch_size=self.batch_size,
+                                                shuffle=True, num_workers=num_workers)
         sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
 
         best = -1.
@@ -135,7 +134,7 @@ class Trainer(object):
             self.decoder.train()
 
             for i, data in enumerate(train_data_loader):
-                clips, labels = data
+                clips, labels, _ = data
                 # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
                 if clips.size(0) < 2:
                     print('Encountered minibatch of size 1. Skipping.')

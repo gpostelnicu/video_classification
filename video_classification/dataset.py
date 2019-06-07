@@ -24,7 +24,7 @@ class SampledDataset(data.Dataset):
         return self.ds[self.indices[item]]
 
 
-def ds_islice(ds, stop, shuffle=False):
+def ds_islice(ds, stop):
     class Ds(data.Dataset):
         def __init__(self, ds, stop):
             self.ds = ds
@@ -122,30 +122,13 @@ def collate_fn(data):
     return clips, labels, lengths
 
 
-class LoaderMaker(object):
-    def __init__(self, base_dir, batch_size, num_workers):
-        self.base_dir = base_dir
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-
-    def make(self, list_file, shuffle, transform):
-        pass
-
-
-class SimpleLoaderMaker(LoaderMaker):
-    def __init__(self, base_dir, batch_size, num_workers, num_frames):
-        super().__init__(base_dir, batch_size, num_workers)
-        self.num_frames = num_frames
-
-    def make(self, list_file, shuffle, transform):
-        ds = VideoFramesDataset.from_list(
-            base_dir=self.base_dir, fname=list_file, num_frames=self.num_frames, transform=transform
-        )
-        loader = DataLoader(
-            dataset=ds,
-            batch_size=self.batch_size,
-            shuffle=shuffle,
-            num_workers=self.num_workers,
-            collate_fn=collate_fn
-        )
-        return loader
+def loader_from_dataset(dataset: data.Dataset, batch_size: int, shuffle: bool, num_workers: int):
+    loader = DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        pin_memory=True
+    )
+    return loader
