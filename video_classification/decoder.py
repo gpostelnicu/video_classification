@@ -16,10 +16,17 @@ class Decoder(nn.Module):
         self.fc1 = nn.Linear(hidden_dim, fc_dim)
         self.fc_out = nn.Linear(fc_dim, out_dim)
 
-    def forward(self, x_seq):
+    def forward(self, x_seq, x_lens):
+        # First, pack sequence so that padded items do not get shown to the lstm.
+        x = nn.utils.rnn.pack_padded_sequence(x_seq, x_lens, batch_first=True)
+
+        # Apply lstm
         lstm_out, _ = self.lstm(x_seq)
 
-        x = lstm_out[:, -1, :]  # Take last time step.
+        # Undo the packing operation
+        unpacked = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
+
+        x = unpacked[:, [i - 1 for i in x_lens], :]  # Take the last valid time step.
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc_out(x)

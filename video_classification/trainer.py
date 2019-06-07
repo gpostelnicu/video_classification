@@ -91,10 +91,10 @@ class Trainer(object):
         losses = []
         criterion = nn.CrossEntropyLoss()
         for i, data in enumerate(data_loader):
-            clips, labels, _ = data
+            clips, labels, clip_lens = data
             clips = clips.to(self.device)
 
-            output = self.decoder(self.encoder(clips))
+            output = self.decoder(self.encoder(clips), clip_lens)
             pred_labels = output.max(1)[1]
             loss = criterion(output, labels.to(self.device).view(-1, ))
 
@@ -133,7 +133,7 @@ class Trainer(object):
             self.decoder.train()
 
             for i, data in enumerate(train_data_loader):
-                clips, labels, _ = data
+                clips, labels, clip_lens = data
                 # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
                 if clips.size(0) < 2:
                     print('Encountered minibatch of size 1. Skipping.')
@@ -146,7 +146,7 @@ class Trainer(object):
 
                 # 2. Forward pass.
                 encoded = self.encoder(clips)
-                pred_labels = self.decoder(encoded)
+                pred_labels = self.decoder(encoded, clip_lens)
 
                 loss = criterion(pred_labels, labels)
 
