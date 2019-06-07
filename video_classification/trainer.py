@@ -8,9 +8,8 @@ from sklearn.metrics import accuracy_score
 
 import torchvision.transforms as transforms
 from torch import nn
-from torch.utils.data import DataLoader
 
-from .dataset import VideoFramesDataset, ds_islice, SampledDataset, SimpleLoaderMaker, loader_from_dataset
+from .dataset import VideoFramesDataset, SampledDataset, loader_from_dataset
 from .decoder import Decoder
 from .encoder import ResnetEncoder
 
