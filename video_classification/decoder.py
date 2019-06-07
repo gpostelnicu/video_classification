@@ -21,7 +21,7 @@ class Decoder(nn.Module):
         x = nn.utils.rnn.pack_padded_sequence(x_seq, x_lens, batch_first=True)
 
         # Apply lstm
-        lstm_out, _ = self.lstm(x_seq)
+        lstm_out, _ = self.lstm(x)
 
         # Undo the packing operation
         unpacked, _ = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
