@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, namedtuple
 import random
 from typing import List
 
@@ -10,14 +10,7 @@ from torch.utils import data
 from torch.utils.data import DataLoader
 
 
-class Sample(object):
-    def __init__(self, folder: str, label: int, start: int, stop: int, step: int, weight: int = 1):
-        self.folder = folder
-        self.label = label
-        self.start = start
-        self.stop = stop
-        self.step = step
-        self.weight = weight
+Sample = namedtuple('Sample', 'folder label start stop step weight'.split())
 
 
 class SampledDataset(data.Dataset):
@@ -87,12 +80,13 @@ class VideoFramesDataset(data.Dataset):
                 for clip in range(min(frames - num_frames, max_samples_per_video)):
                     step = random.randint(1, max(1, min(10, frames // num_frames)))
                     start = random.randint(0, max(0, frames - num_frames * step))
-                    stop = random.randint(num_frames, min(2 * num_frames, frames // step - start - 1)) + start
-                    vid_samples.append(Sample(folder=folder, label=label, start=start, stop=stop, step=step))
+                    stop = random.randint(num_frames, min(2 * num_frames, (frames - start) // step)) + start
+                    vid_samples.append(
+                        Sample(folder=folder, label=label, start=start, stop=stop, step=step, weight=1.))
                 counter = Counter(vid_samples)
                 for s, n in counter.items():
                     s.weight = n
-                    samples.append(s)
+                    samples.append(s._replace(weight=n))
         return VideoFramesDataset(base_dir=base_dir, samples=samples, transform=transform)
 
     def __len__(self):
@@ -132,7 +126,6 @@ def collate_fn(data):
     clips = torch.nn.utils.rnn.pad_sequence(clips, batch_first=True)
     labels = torch.stack(labels, 0)
     weights = torch.stack(weights, 0).squeeze()
-    weights = weights / torch.sum(weights)
 
     return clips, labels, lengths, weights
 

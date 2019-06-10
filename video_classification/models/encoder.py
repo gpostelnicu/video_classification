@@ -4,8 +4,15 @@ import torch.nn.functional as F
 from torchvision import models
 
 
+NETS = {
+    'resnet18': models.resnet18,
+    'resnet50': models.resnet50,
+    'resnet101': models.resnet101,
+    'resnet152': models.resnet152
+}
+
 class ResnetEncoder(nn.Module):
-    def __init__(self, fc_hidden1=512, fc_hidden2=512, out_dim=300, pretrained=True):
+    def __init__(self, basenet_name='resnet152', fc_hidden1=512, fc_hidden2=512, out_dim=300, pretrained=True):
         super().__init__()
 
         resnet = models.resnet152(pretrained=pretrained)

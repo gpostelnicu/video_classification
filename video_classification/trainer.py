@@ -70,15 +70,17 @@ class Trainer(object):
         expected = []
         predicted = []
         losses = []
-        criterion = nn.CrossEntropyLoss(reduction=None)
+        criterion = nn.CrossEntropyLoss(reduction='none')
         for i, data in enumerate(data_loader):
             clip, labels, clip_lens, weights = data
             clip = clip.to(self.device)
+            weights = weights.to(self.device)
 
             output = self.model(clip, clip_lens)
             pred_labels = output.max(1)[1]
             loss = criterion(output, labels.to(self.device).view(-1, ))
             loss = loss * weights
+            loss = loss.mean()
 
             expected.extend(labels)
             predicted.extend(pred_labels)
@@ -96,7 +98,7 @@ class Trainer(object):
 
         optimizer = torch.optim.Adam(params, lr=self.learning_rate)
 
-        criterion = nn.CrossEntropyLoss(reduction=None)
+        criterion = nn.CrossEntropyLoss(reduction='none')
 
         train_data_loader = loader_from_dataset(dataset=self.train_dataset, batch_size=self.batch_size,
                                                 shuffle=True, num_workers=num_workers)
@@ -119,6 +121,7 @@ class Trainer(object):
                     continue
                 clip = clip.to(self.device)
                 labels = labels.to(self.device).view(-1,)
+                weights = weights.to(self.device)
 
                 # 1. Clear previously set gradients.
                 optimizer.zero_grad()
@@ -127,6 +130,7 @@ class Trainer(object):
                 pred_labels = self.model(clip, clip_lens)
                 loss = criterion(pred_labels, labels)
                 loss = loss * weights
+                loss = loss.mean()
 
                 # 3. Backprop.
                 loss.backward()
