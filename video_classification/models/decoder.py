@@ -26,7 +26,7 @@ class Decoder(nn.Module):
         # Undo the packing operation
         unpacked, _ = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
 
-        x = unpacked[:, [i - 1 for i in x_lens], :]  # Take the last valid time step.
+        x = unpacked[range(x_seq.size(0)), [i - 1 for i in x_lens], :]  # Take the last valid time step.
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc_out(x)

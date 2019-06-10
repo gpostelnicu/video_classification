@@ -5,10 +5,10 @@ from torchvision import models
 
 
 class ResnetEncoder(nn.Module):
-    def __init__(self, fc_hidden1=512, fc_hidden2=512, out_dim=300):
+    def __init__(self, fc_hidden1=512, fc_hidden2=512, out_dim=300, pretrained=True):
         super().__init__()
 
-        resnet = models.resnet152(pretrained=True)
+        resnet = models.resnet152(pretrained=pretrained)
         modules = list(resnet.children())[:-1]  # Delete last FC layer.
         self.resnet = nn.Sequential(*modules)
         for p in self.resnet.parameters():  # Only finetuning, disable training for the base net.
@@ -16,9 +16,9 @@ class ResnetEncoder(nn.Module):
 
         # It seems encoding layers inside a list breaks - understand why.
         self.fc1 = nn.Linear(resnet.fc.in_features, fc_hidden1)
-        self.bn1 = nn.BatchNorm1d(fc_hidden1, momentum=0.01)
+        self.bn1 = nn.BatchNorm1d(fc_hidden1, momentum=0.1)
         self.fc2 = nn.Linear(fc_hidden1, fc_hidden2)
-        self.bn2 = nn.BatchNorm1d(fc_hidden2, momentum=0.01)
+        self.bn2 = nn.BatchNorm1d(fc_hidden2, momentum=0.1)
         self.fc3 = nn.Linear(fc_hidden2, out_dim)
 
     def forward(self, x_3d):
