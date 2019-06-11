@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--print_every_n', type=int, default=10)
 
     args = parser.parse_args()
+    print('Command-line args: {}'.format(args))
 
     main(args.base_dir, args.train_list, args.test_list, args.config, args.num_frames,
          args.save_prefix, args.num_epochs, args.num_workers, args.print_every_n)

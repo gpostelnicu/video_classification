@@ -15,7 +15,7 @@ class ResnetEncoder(nn.Module):
     def __init__(self, basenet_name='resnet152', fc_hidden1=512, fc_hidden2=512, out_dim=300, pretrained=True):
         super().__init__()
 
-        resnet = models.resnet152(pretrained=pretrained)
+        resnet = NETS[basenet_name](pretrained=pretrained)
         modules = list(resnet.children())[:-1]  # Delete last FC layer.
         self.resnet = nn.Sequential(*modules)
         for p in self.resnet.parameters():  # Only finetuning, disable training for the base net.

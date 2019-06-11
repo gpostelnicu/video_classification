@@ -1,13 +1,12 @@
 # Training process
 batch_size: 16
 optimizer: 'adam'
-learning_rate: 1e-3
-
-# Network parameters
-
+learning_rate: 1e-4
+num_samples_per_folder: 3
 performance_train_max_items: 1000
 
 model:
+    encoder_basenet: 'resnet50'
     encoder_fc_dim1: 256
     encoder_fc_dim2: 256
     encoder_out_dim: 128

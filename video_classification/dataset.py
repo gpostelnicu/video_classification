@@ -85,7 +85,6 @@ class VideoFramesDataset(data.Dataset):
                         Sample(folder=folder, label=label, start=start, stop=stop, step=step, weight=1.))
                 counter = Counter(vid_samples)
                 for s, n in counter.items():
-                    s.weight = n
                     samples.append(s._replace(weight=n))
         return VideoFramesDataset(base_dir=base_dir, samples=samples, transform=transform)
 

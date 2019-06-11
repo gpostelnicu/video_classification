@@ -17,8 +17,10 @@ from .dataset import VideoFramesDataset, SampledDataset, loader_from_dataset
 class Trainer(object):
     def __init__(self, base_dir: str,
                  train_list_file: str, test_list_file: str,
-                 config_file: str, target_size=224, num_frames=29, max_samples_per_video=3):
+                 config_file: str, target_size=224, num_frames=29):
         self.logger = FloydLogger()
+        model_config = self._load_config(config_file)
+
         # Resnet normalization, see https://github.com/pytorch/vision/issues/39
         basic_tranform = transforms.Compose([
             transforms.ToTensor(),
@@ -36,16 +38,16 @@ class Trainer(object):
         ])
 
         self.train_dataset = VideoFramesDataset.from_list(
-            base_dir=base_dir, fname=train_list_file, max_samples_per_video=max_samples_per_video,
+            base_dir=base_dir, fname=train_list_file,
+            max_samples_per_video=self.num_samples_per_folder,
             num_frames=num_frames, transform=train_transform
         )
 
         self.test_dataset = VideoFramesDataset.from_list(
-            base_dir=base_dir, fname=test_list_file, max_samples_per_video=max_samples_per_video,
+            base_dir=base_dir, fname=test_list_file,
+            max_samples_per_video=self.num_samples_per_folder,
             num_frames=num_frames, transform=eval_transform
         )
-
-        model_config = self._load_config(config_file)
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -55,11 +57,13 @@ class Trainer(object):
     def _load_config(self, config_file):
         with open(config_file) as stream:
             config = yaml.safe_load(stream)
+            print('Config: {}'.format(config))
             self.learning_rate = float(config['learning_rate'])  # yaml doesn't seem to parse scientific notation.
             self.batch_size = config['batch_size']
             model_config = config['model']
 
             self.performance_train_max_items = config.get('performance_train_max_items', -1)
+            self.num_samples_per_folder = config.get('num_samples_per_folder', 1)
             return model_config
 
     def peformance(self, dataset, num_workers=0):

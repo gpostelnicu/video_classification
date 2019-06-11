@@ -18,16 +18,17 @@ def count_params(lst_params: list):
 
 
 class ResnetLstm(nn.Module):
-    def __init__(self, encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim,
+    def __init__(self, encoder_basenet, encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim,
                  decoder_hidden_dim, decoder_hidden_num, decoder_fc_dim, decoder_out_dim, pretrained=True):
         super().__init__()
 
-        self.encoder = ResnetEncoder(encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim, pretrained)
+        self.encoder = ResnetEncoder(encoder_basenet, encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim, pretrained)
         self.decoder = Decoder(encoder_out_dim, decoder_hidden_dim, decoder_hidden_num,
                                decoder_fc_dim, decoder_out_dim)
 
     @staticmethod
     def from_config(config, pretrained=True):
+        encoder_basenet = config['encoder_basenet']
         encoder_fc1_dim = config['encoder_fc_dim1']
         encoder_fc2_dim = config['encoder_fc_dim2']
         encoder_out_dim = config['encoder_out_dim']
@@ -38,7 +39,8 @@ class ResnetLstm(nn.Module):
 
         decoder_out_dim = config['num_labels']
 
-        return ResnetLstm(encoder_fc1_dim=encoder_fc1_dim, encoder_fc2_dim=encoder_fc2_dim,
+        return ResnetLstm(encoder_basenet=encoder_basenet,
+                          encoder_fc1_dim=encoder_fc1_dim, encoder_fc2_dim=encoder_fc2_dim,
                           encoder_out_dim=encoder_out_dim, decoder_hidden_dim=decoder_hidden_dim,
                           decoder_hidden_num=decoder_hidden_num, decoder_out_dim=decoder_out_dim,
                           decoder_fc_dim=decoder_fc_dim, pretrained=pretrained)
