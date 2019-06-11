@@ -42,12 +42,16 @@ class Trainer(object):
             max_samples_per_video=self.num_samples_per_folder,
             num_frames=num_frames, transform=train_transform
         )
+        print('Train dataset stats')
+        self.train_dataset.summary()
 
         self.test_dataset = VideoFramesDataset.from_list(
             base_dir=base_dir, fname=test_list_file,
             max_samples_per_video=self.num_samples_per_folder,
             num_frames=num_frames, transform=eval_transform
         )
+        print('Test dataset stats')
+        self.test_dataset.summary()
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

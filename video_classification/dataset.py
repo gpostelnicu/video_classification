@@ -80,7 +80,7 @@ class VideoFramesDataset(data.Dataset):
                 for clip in range(min(frames - num_frames, max_samples_per_video)):
                     step = random.randint(1, max(1, min(10, frames // num_frames)))
                     start = random.randint(0, max(0, frames - num_frames * step))
-                    stop = random.randint(num_frames, min(2 * num_frames, (frames - start) // step)) + start
+                    stop = step * random.randint(num_frames, min(2 * num_frames, (frames - start) // step)) + start
                     vid_samples.append(
                         Sample(folder=folder, label=label, start=start, stop=stop, step=step, weight=1.))
                 counter = Counter(vid_samples)
@@ -99,6 +99,12 @@ class VideoFramesDataset(data.Dataset):
         y = torch.LongTensor([label - 1])  # Make output label 0-based.
         w = torch.Tensor([sample.weight])
         return x, y, w
+
+    def summary(self):
+        num_frames = [(s.stop - s.start) // s.step for s in self.samples]
+        print('Dataset stats: len={}, avg frames={}, max frames={}, min_frames={}'.format(
+            len(self.samples), sum(num_frames) / len(num_frames), max(num_frames), min(num_frames)
+        ))
 
     def _read_images(self, folder: str, start: int, stop: int, step: int):
         x = []

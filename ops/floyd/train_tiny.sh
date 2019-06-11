@@ -7,6 +7,6 @@ PYTHONPATH=`pwd` python bin/train.py \
     --config resources/tiny_config.yaml \
     --save_prefix /output/tiny \
     --num_epochs 20 \
-    --num_workers 2 \
+    --num_workers 0 \
     --print_every_n 10 \
     --num_frames 50
