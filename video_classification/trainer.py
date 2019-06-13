@@ -101,14 +101,20 @@ class Trainer(object):
         loss = np.mean(losses)
         return score, loss
 
-    def train(self, save_fname, num_epochs, num_workers=0, print_every_n=200):
+    def train(self, save_fname, num_epochs, num_workers=0, print_every_n=200, max_steps_per_epoch=-1):
         params = list(self.model.parameters())
         print('Total/trainable params: {}'.format(count_params(params)))
 
         optimizer = torch.optim.Adam(params, lr=self.learning_rate)
         criterion = nn.CrossEntropyLoss(reduction='none')
 
-        train_data_loader = loader_from_dataset(dataset=self.train_dataset, batch_size=self.batch_size,
+        ds = self.train_dataset
+        if max_steps_per_epoch > 0:
+            training_size = max_steps_per_epoch * self.batch_size
+            print('Applying sampling for training dataset size. Size = {}'.format(training_size))
+            ds = SampledDataset(self.train_dataset, training_size)
+
+        train_data_loader = loader_from_dataset(dataset=ds, batch_size=self.batch_size,
                                                 shuffle=True, num_workers=num_workers)
         sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
 
