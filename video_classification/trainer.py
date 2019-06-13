@@ -40,7 +40,7 @@ class Trainer(object):
         self.train_dataset = VideoFramesDataset.from_list(
             base_dir=base_dir, fname=train_list_file,
             max_samples_per_video=self.num_samples_per_folder,
-            num_frames=num_frames, transform=train_transform
+            target_frames=num_frames, transform=train_transform
         )
         print('Train dataset stats')
         self.train_dataset.summary()
@@ -48,7 +48,7 @@ class Trainer(object):
         self.test_dataset = VideoFramesDataset.from_list(
             base_dir=base_dir, fname=test_list_file,
             max_samples_per_video=self.num_samples_per_folder,
-            num_frames=num_frames, transform=eval_transform
+            target_frames=num_frames, transform=eval_transform
         )
         print('Test dataset stats')
         self.test_dataset.summary()
@@ -82,13 +82,14 @@ class Trainer(object):
         for i, data in enumerate(data_loader):
             clip, labels, clip_lens, weights = data
             clip = clip.to(self.device)
+            labels = labels.to(self.device)
             weights = weights.to(self.device)
 
             output = self.model(clip, clip_lens)
             pred_labels = output.max(1)[1]
-            loss = criterion(output, labels.to(self.device).view(-1, ))
+            loss = criterion(output, labels.view(-1,))
             loss = loss * weights
-            loss = loss.mean()
+            loss = loss.sum()
 
             expected.extend(labels)
             predicted.extend(pred_labels)
@@ -100,26 +101,25 @@ class Trainer(object):
         loss = np.mean(losses)
         return score, loss
 
-    def train(self, save_prefix, num_epochs, num_workers=0, print_every_n=200):
+    def train(self, save_fname, num_epochs, num_workers=0, print_every_n=200):
         params = list(self.model.parameters())
         print('Total/trainable params: {}'.format(count_params(params)))
 
         optimizer = torch.optim.Adam(params, lr=self.learning_rate)
-
         criterion = nn.CrossEntropyLoss(reduction='none')
 
         train_data_loader = loader_from_dataset(dataset=self.train_dataset, batch_size=self.batch_size,
                                                 shuffle=True, num_workers=num_workers)
         sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
 
-        best = -1.
+        min_loss = 1e9
         for epoch in range(num_epochs):
             print('Epoch {}'.format(epoch))
             running_loss = 0.0
             count = 0
             start_time = time.time()
-            # Set models in training mode - for batch norm or dropout.
-            self.model.train()
+
+            self.model.train()  # Set models in training mode - for batch norm or dropout.
 
             for i, data in enumerate(train_data_loader):
                 clip, labels, clip_lens, weights = data
@@ -138,7 +138,7 @@ class Trainer(object):
                 pred_labels = self.model(clip, clip_lens)
                 loss = criterion(pred_labels, labels)
                 loss = loss * weights
-                loss = loss.mean()
+                loss = loss.sum()
 
                 # 3. Backprop.
                 loss.backward()
@@ -149,6 +149,7 @@ class Trainer(object):
                 if (i + 1) % print_every_n == 0:
                     end_time = time.time()
                     delta_seconds = end_time - start_time
+                    self.logger.log("running_loss", running_loss / count)
                     print('epoch {}, step {}: loss {}, total time: {} time per sample: {}'.format(
                         epoch, i, running_loss / count, delta_seconds, delta_seconds / (self.batch_size * count)))
                     running_loss = 0.0
@@ -165,7 +166,7 @@ class Trainer(object):
                 self.logger.log("test_accuracy", test_accuracy, epoch)
                 self.logger.log("test_loss", test_loss, epoch)
 
-            if test_accuracy > best:
-                print('Saving')
-                torch.save(self.model.state_dict(), '{}_resnet_lstm.pth'.format(save_prefix))
-                best = test_accuracy
+                if test_loss > min_loss:
+                    print('Saving')
+                    torch.save(self.model.to_dict(include_state=True), save_fname)
+                    min_loss = test_loss

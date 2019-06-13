@@ -6,14 +6,14 @@ import os
 
 import torch
 from PIL import Image
-from torch.utils import data
+from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
 
 Sample = namedtuple('Sample', 'folder label start stop step weight'.split())
 
 
-class SampledDataset(data.Dataset):
+class SampledDataset(Dataset):
     def __init__(self, ds, sample_size):
         if sample_size < 0 or sample_size > len(ds):
             raise ValueError("Illegal value sample_size={} should be in range [0, {}]".format(
@@ -28,11 +28,11 @@ class SampledDataset(data.Dataset):
         return self.ds[self.indices[item]]
 
 
-def ds_islice(ds, stop):
-    class Ds(data.Dataset):
-        def __init__(self, ds, stop):
+def ds_islice(dataset, stop):
+    class Ds(Dataset):
+        def __init__(self, ds, _stop):
             self.ds = ds
-            self.stop = stop
+            self.stop = _stop
 
         def __len__(self):
             return min(len(self.ds), self.stop)
@@ -41,25 +41,35 @@ def ds_islice(ds, stop):
             return self.ds[item]
 
     if stop < 0:  # no-op
-        return ds
-    return Ds(ds, stop)
+        return dataset
+    return Ds(dataset, stop)
 
 
-class VideoFramesDataset(data.Dataset):
+def random_range(frame_count, target_frames, max_step=10):
+    if frame_count <= target_frames:
+        return 0, frame_count, 1
+
+    step = random.randint(1, max(1, min(max_step, frame_count // target_frames)))
+    start = random.randint(0, max(0, frame_count - target_frames * step))
+    stop = step * random.randint(target_frames, min(2 * target_frames, (frame_count - start) // step)) + start
+    return start, stop, step
+
+
+class VideoFramesDataset(Dataset):
     def __init__(self, base_dir: str, samples: List[Sample], transform=None):
         self.base_dir = base_dir
         self.samples = samples
         self.transform = transform
 
     @staticmethod
-    def from_list(base_dir: str, fname: str, max_samples_per_video: int, num_frames: int, transform):
+    def from_list(base_dir: str, fname: str, max_samples_per_video: int, target_frames: int, transform):
         """
         from_list creates a dataset from a file containing a space-separated list of folder,labelIndex,numImages.
 
         Args:
             fname: filename containing the list
             max_samples_per_video: maximum number of samples to generate from a single video
-            num_frames: number of frames to parse by folder
+            target_frames: number of frames to parse by folder
             transform: optional transform to apply to all images.
         Returns:
             VideoFramesDataset: created dataset.
@@ -75,12 +85,10 @@ class VideoFramesDataset(data.Dataset):
                     raise RuntimeError('Error parsing line {}'.format(line))
                 folder = parts[0]
                 label = int(parts[1])
-                frames = int(parts[2])
+                frame_count = int(parts[2])
                 # Select random starting point
-                for clip in range(min(frames - num_frames, max_samples_per_video)):
-                    step = random.randint(1, max(1, min(10, frames // num_frames)))
-                    start = random.randint(0, max(0, frames - num_frames * step))
-                    stop = step * random.randint(num_frames, min(2 * num_frames, (frames - start) // step)) + start
+                for clip in range(max_samples_per_video):
+                    start, stop, step = random_range(frame_count=frame_count, target_frames=target_frames)
                     vid_samples.append(
                         Sample(folder=folder, label=label, start=start, stop=stop, step=step, weight=1.))
                 counter = Counter(vid_samples)
@@ -131,11 +139,12 @@ def collate_fn(data):
     clips = torch.nn.utils.rnn.pad_sequence(clips, batch_first=True)
     labels = torch.stack(labels, 0)
     weights = torch.stack(weights, 0).squeeze()
+    weights = weights / weights.sum()
 
     return clips, labels, lengths, weights
 
 
-def loader_from_dataset(dataset: data.Dataset, batch_size: int, shuffle: bool, num_workers: int):
+def loader_from_dataset(dataset: Dataset, batch_size: int, shuffle: bool, num_workers: int):
     loader = DataLoader(
         dataset=dataset,
         batch_size=batch_size,

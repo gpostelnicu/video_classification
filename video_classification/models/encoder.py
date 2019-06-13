@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -11,22 +13,48 @@ NETS = {
     'resnet152': models.resnet152
 }
 
+
+ResnetEncoderConfig = namedtuple(
+    'ResnetEncoderConfig',
+    'basenet fc1_dim fc2_dim out_dim pretrained'.split())
+
+
+CONFIG = 'config'
+STATE = 'state'
+
+
 class ResnetEncoder(nn.Module):
-    def __init__(self, basenet_name='resnet152', fc_hidden1=512, fc_hidden2=512, out_dim=300, pretrained=True):
+    def __init__(self, config: ResnetEncoderConfig):
         super().__init__()
 
-        resnet = NETS[basenet_name](pretrained=pretrained)
+        self.config = config
+        resnet = NETS[config.basenet](pretrained=config.pretrained)
         modules = list(resnet.children())[:-1]  # Delete last FC layer.
         self.resnet = nn.Sequential(*modules)
         for p in self.resnet.parameters():  # Only finetuning, disable training for the base net.
             p.requires_grad = False
 
         # It seems encoding layers inside a list breaks - understand why.
-        self.fc1 = nn.Linear(resnet.fc.in_features, fc_hidden1)
-        self.bn1 = nn.BatchNorm1d(fc_hidden1, momentum=0.1)
-        self.fc2 = nn.Linear(fc_hidden1, fc_hidden2)
-        self.bn2 = nn.BatchNorm1d(fc_hidden2, momentum=0.1)
-        self.fc3 = nn.Linear(fc_hidden2, out_dim)
+        self.fc1 = nn.Linear(resnet.fc.in_features, config.fc1_dim)
+        self.bn1 = nn.BatchNorm1d(config.fc1_dim, momentum=0.1)
+        self.fc2 = nn.Linear(config.fc1_dim, config.fc2_dim)
+        self.bn2 = nn.BatchNorm1d(config.fc2_dim, momentum=0.1)
+        self.fc3 = nn.Linear(config.fc2_dim, config.out_dim)
+
+    @staticmethod
+    def from_dict(checkpoint: dict):
+        assert CONFIG in checkpoint
+        config = ResnetEncoderConfig(**checkpoint[CONFIG])
+        encoder = ResnetEncoder(config)
+        assert STATE in checkpoint
+        encoder.load_state_dict(checkpoint[STATE])
+        return encoder
+
+    def to_dict(self, include_state=True):
+        dic = {CONFIG: dict(self.config._asdict())}
+        if include_state:
+            dic[STATE] = self.state_dict()
+        return dic
 
     def forward(self, x_3d):
         cnn_seq = []

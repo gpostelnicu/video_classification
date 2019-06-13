@@ -1,20 +1,46 @@
+from collections import namedtuple
+
 import torch.nn as nn
 import torch.nn.functional as F
 
 
+DecoderConfig = namedtuple(
+    'DecoderConfig', 'input_dim hidden_dim num_hidden_layers fc_dim out_dim'.split())
+
+
+CONFIG = 'config'
+STATE = 'state'
+
+
 class Decoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_hidden_layers, fc_dim, out_dim):
+    def __init__(self, config: DecoderConfig):
         super().__init__()
 
+        self.config = config
         self.lstm = nn.LSTM(
-            input_size=input_dim,
-            hidden_size=hidden_dim,
-            num_layers=num_hidden_layers,
+            input_size=config.input_dim,
+            hidden_size=config.hidden_dim,
+            num_layers=config.num_hidden_layers,
             batch_first=True
         )
 
-        self.fc1 = nn.Linear(hidden_dim, fc_dim)
-        self.fc_out = nn.Linear(fc_dim, out_dim)
+        self.fc1 = nn.Linear(config.hidden_dim, config.fc_dim)
+        self.fc_out = nn.Linear(config.fc_dim, config.out_dim)
+
+    @staticmethod
+    def from_dict(checkpoint: dict):
+        assert CONFIG in checkpoint
+        config = DecoderConfig(**checkpoint[CONFIG])
+        decoder = Decoder(config)
+        assert STATE in checkpoint
+        decoder.load_state_dict(checkpoint[STATE])
+        return decoder
+
+    def to_dict(self, include_state=True):
+        dic = {CONFIG: dict(self.config._asdict())}
+        if include_state:
+            dic[STATE] = self.state_dict()
+        return dic
 
     def forward(self, x_seq, x_lens):
         # First, pack sequence so that padded items do not get shown to the lstm.
@@ -32,5 +58,3 @@ class Decoder(nn.Module):
         x = self.fc_out(x)
 
         return x
-
-

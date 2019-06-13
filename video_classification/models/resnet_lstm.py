@@ -1,7 +1,11 @@
 import torch.nn as nn
 
-from .decoder import Decoder
-from .encoder import ResnetEncoder
+from .decoder import Decoder, DecoderConfig
+from .encoder import ResnetEncoder, ResnetEncoderConfig
+
+
+ENCODER = 'encoder'
+DECODER = 'decoder'
 
 
 def count_params(lst_params: list):
@@ -18,32 +22,23 @@ def count_params(lst_params: list):
 
 
 class ResnetLstm(nn.Module):
-    def __init__(self, encoder_basenet, encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim,
-                 decoder_hidden_dim, decoder_hidden_num, decoder_fc_dim, decoder_out_dim, pretrained=True):
+    def __init__(self, encoder_config, decoder_config):
         super().__init__()
 
-        self.encoder = ResnetEncoder(encoder_basenet, encoder_fc1_dim, encoder_fc2_dim, encoder_out_dim, pretrained)
-        self.decoder = Decoder(encoder_out_dim, decoder_hidden_dim, decoder_hidden_num,
-                               decoder_fc_dim, decoder_out_dim)
+        self.encoder = ResnetEncoder(encoder_config)
+        self.decoder = Decoder(decoder_config)
 
     @staticmethod
-    def from_config(config, pretrained=True):
-        encoder_basenet = config['encoder_basenet']
-        encoder_fc1_dim = config['encoder_fc_dim1']
-        encoder_fc2_dim = config['encoder_fc_dim2']
-        encoder_out_dim = config['encoder_out_dim']
+    def from_config(config):
+        encoder_config = ResnetEncoderConfig(**config[ENCODER])
+        decoder_config = DecoderConfig(**config[DECODER])
 
-        decoder_hidden_dim = config['decoder_hidden_dim']
-        decoder_hidden_num = config['decoder_num_hidden_layers']
-        decoder_fc_dim = config['decoder_fc_dim']
+        return ResnetLstm(encoder_config=encoder_config,
+                          decoder_config=decoder_config)
 
-        decoder_out_dim = config['num_labels']
-
-        return ResnetLstm(encoder_basenet=encoder_basenet,
-                          encoder_fc1_dim=encoder_fc1_dim, encoder_fc2_dim=encoder_fc2_dim,
-                          encoder_out_dim=encoder_out_dim, decoder_hidden_dim=decoder_hidden_dim,
-                          decoder_hidden_num=decoder_hidden_num, decoder_out_dim=decoder_out_dim,
-                          decoder_fc_dim=decoder_fc_dim, pretrained=pretrained)
+    def to_dict(self, include_state=True):
+        return {ENCODER: self.encoder.to_dict(include_state),
+                DECODER: self.decoder.to_dict(include_state)}
 
     def forward(self, x_3d, x_len):
         encoded = self.encoder(x_3d)
