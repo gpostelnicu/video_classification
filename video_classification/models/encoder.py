@@ -67,9 +67,7 @@ class ImageEncoder(nn.Module):
 
     def process(self, x):
         x = self.basenet(x)
-
-        s = x.size()
-        x = x.view(s[:-2] + s[-1:])  # Squeeze singleton penultimate dimension of resnet.
+        x = x.squeeze()
 
         # Apply RELU before BatchNorm - having a zero mean implies half the values are negative.
         x = F.relu(self.fc1(x))
