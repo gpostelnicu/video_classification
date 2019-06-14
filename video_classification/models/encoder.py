@@ -3,6 +3,7 @@ from collections import namedtuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import PackedSequence
 from torchvision import models
 
 
@@ -21,6 +22,58 @@ ResnetEncoderConfig = namedtuple(
 
 CONFIG = 'config'
 STATE = 'state'
+
+
+class ImageEncoder(nn.Module):
+    def __init__(self, config: ResnetEncoderConfig):
+        super().__init__()
+        self.config = config
+        basenet = NETS[config.basenet](pretrained=config.pretrained)
+        modules = list(basenet.children())[:-1]  # Delete last FC layer.
+        self.basenet = nn.Sequential(*modules)
+        for p in self.basenet.parameters():  # Only finetuning, disable training for the base net.
+            p.requires_grad = False
+
+        # It seems encoding layers inside a list breaks - understand why.
+        self.fc1 = nn.Linear(basenet.fc.in_features, config.fc1_dim)
+        self.bn1 = nn.BatchNorm1d(config.fc1_dim, momentum=0.1)
+        self.fc2 = nn.Linear(config.fc1_dim, config.fc2_dim)
+        self.bn2 = nn.BatchNorm1d(config.fc2_dim, momentum=0.1)
+        self.fc3 = nn.Linear(config.fc2_dim, config.out_dim)
+
+    @staticmethod
+    def from_dict(checkpoint: dict):
+        assert CONFIG in checkpoint
+        config = ResnetEncoderConfig(**checkpoint[CONFIG])
+        encoder = ResnetEncoder(config)
+        assert STATE in checkpoint
+        encoder.load_state_dict(checkpoint[STATE])
+        return encoder
+
+    def to_dict(self, include_state=True):
+        dic = {CONFIG: dict(self.config._asdict())}
+        if include_state:
+            dic[STATE] = self.state_dict()
+        return dic
+
+    def forward(self, x_3d):
+        """
+        forward expects a PackedSequence as input.
+        """
+        assert isinstance(x_3d, PackedSequence)
+        x = self.basenet(x_3d)
+
+        s = x.size()
+        x = x.view(s[:-2] + s[-1:])
+
+        x = self.bn1(self.fc1(x))
+        x = F.relu(x)
+
+        x = self.bn2(self.fc2(x))
+        x = F.relu(x)
+
+        x = self.fc3(x)
+        return x
 
 
 class ResnetEncoder(nn.Module):
