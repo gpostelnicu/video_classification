@@ -60,17 +60,9 @@ class ImageEncoder(nn.Module):
         """
         forward expects a PackedSequence as input.
         """
-        batch_size = self.config.image_batch_size
-        blocks = []
-        idx = batch_size
-        while idx < packed_x.size(0):
-            out = self.process(packed_x[range((idx - 1) * batch_size, idx * batch_size)])
-            blocks.append(out)
-            idx += batch_size
-        if idx < packed_x.size(0):
-            out = self.process(packed_x[range(idx * batch_size, packed_x.size(0))])
-            blocks.append(out)
-        encoded = torch.cat(blocks, 0)
+        chunks = torch.chunk(packed_x, self.config.image_batch_size, 0)
+        out = [self.process(chunk) for chunk in chunks]
+        encoded = torch.cat(out, 0)
         return encoded
 
     def process(self, x):
