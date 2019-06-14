@@ -128,7 +128,7 @@ class Trainer(object):
             self.model.train()  # Set models in training mode - for batch norm or dropout.
 
             for i, data in enumerate(train_data_loader):
-                packed_clip, labels, weights = data
+                clip, labels, weights = data
                 # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
                 if labels.size(0) < 2:
                     print('Encountered minibatch of size 1. Skipping.')
