@@ -136,7 +136,7 @@ def collate(data):
     clips, labels, weights = zip(*data)
 
     # Merge images (from tuple of 4D tensor to 5D tensor).
-    clips = torch.nn.utils.rnn.pack_sequence(clips)
+    clips, _ = torch.nn.utils.rnn.pack_sequence(clips)
     labels = torch.stack(labels, 0)
     weights = torch.stack(weights, 0).squeeze()
     weights = weights / weights.sum()
