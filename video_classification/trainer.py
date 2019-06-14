@@ -80,12 +80,12 @@ class Trainer(object):
         losses = []
         criterion = nn.CrossEntropyLoss(reduction='none')
         for i, data in enumerate(data_loader):
-            clip, labels, weights = data
+            clip, labels, batch_sizes, weights = data
             clip = clip.to(self.device)
             labels = labels.to(self.device)
             weights = weights.to(self.device)
 
-            output = self.model(clip)
+            output = self.model(clip, batch_sizes)
             pred_labels = output.max(1)[1]
             loss = criterion(output, labels.view(-1,))
             loss = loss * weights
@@ -128,7 +128,7 @@ class Trainer(object):
             self.model.train()  # Set models in training mode - for batch norm or dropout.
 
             for i, data in enumerate(train_data_loader):
-                clip, labels, weights = data
+                clip, labels, batch_sizes, weights = data
                 # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
                 if labels.size(0) < 2:
                     print('Encountered minibatch of size 1. Skipping.')
@@ -141,7 +141,7 @@ class Trainer(object):
                 optimizer.zero_grad()
 
                 # 2. Forward pass.
-                pred_labels = self.model(clip)
+                pred_labels = self.model(clip, batch_sizes)
                 loss = criterion(pred_labels, labels)
                 loss = loss * weights
                 loss = loss.sum()

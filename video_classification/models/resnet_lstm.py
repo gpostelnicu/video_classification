@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torch.nn.utils.rnn import PackedSequence
 
 from .decoder import Decoder, DecoderConfig
 from .encoder import ResnetEncoder, ResnetEncoderConfig, ImageEncoder
@@ -39,8 +40,9 @@ class ResnetLstm(nn.Module):
         return {ENCODER: self.encoder.to_dict(include_state),
                 DECODER: self.decoder.to_dict(include_state)}
 
-    def forward(self, packed_x):
-        encoded = packed_x._replace(data=self.encoder(packed_x.data))
-        outputs = self.decoder(encoded)
+    def forward(self, packed_x, batch_sizes):
+        encoded = self.encoder(packed_x)
+        seq = PackedSequence(data=encoded, batch_sizes=batch_sizes)
+        outputs = self.decoder(seq)
         return outputs
 

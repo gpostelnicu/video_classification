@@ -17,7 +17,7 @@ NETS = {
 
 ResnetEncoderConfig = namedtuple(
     'ResnetEncoderConfig',
-    'basenet fc1_dim fc2_dim out_dim pretrained'.split())
+    'basenet fc1_dim fc2_dim out_dim pretrained image_batch_size'.split())
 
 
 CONFIG = 'config'
@@ -56,12 +56,25 @@ class ImageEncoder(nn.Module):
             dic[STATE] = self.state_dict()
         return dic
 
-    def forward(self, x_3d):
+    def forward(self, packed_x):
         """
         forward expects a PackedSequence as input.
         """
-        assert isinstance(x_3d, PackedSequence)
-        x = self.basenet(x_3d)
+        batch_size = self.config.image_batch_size
+        blocks = []
+        idx = batch_size
+        while idx < packed_x.size(0):
+            out = self.process(packed_x[range((idx - 1) * batch_size, idx * batch_size)])
+            blocks.append(out)
+            idx += batch_size
+        if idx < packed_x.size(0):
+            out = self.process(packed_x[range(idx * batch_size, packed_x.size(0))])
+            blocks.append(out)
+        encoded = torch.cat(blocks, 0)
+        return encoded
+
+    def process(self, x):
+        x = self.basenet(x)
 
         s = x.size()
         x = x.view(s[:-2] + s[-1:])  # Squeeze singleton penultimate dimension of resnet.
