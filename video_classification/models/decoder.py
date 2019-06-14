@@ -43,7 +43,7 @@ class Decoder(nn.Module):
         return dic
 
     def forward(self, pack_x):
-        lstm_out, _ = self.lstm(x)
+        lstm_out, _ = self.lstm(pack_x)
 
         # Unpack the PackedSequence.
         unpacked, seq_lens = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
