@@ -141,7 +141,7 @@ class Trainer(object):
                 optimizer.zero_grad()
 
                 # 2. Forward pass.
-                pred_labels = self.model(packed_clip)
+                pred_labels = self.model(clip)
                 loss = criterion(pred_labels, labels)
                 loss = loss * weights
                 loss = loss.sum()
