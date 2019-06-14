@@ -60,7 +60,7 @@ class ImageEncoder(nn.Module):
         """
         forward expects a PackedSequence as input.
         """
-        num_chunks = packed_x.size(0) // self.config.chunk_size
+        num_chunks = max(1, packed_x.size(0) // self.config.chunk_size)
         chunks = torch.chunk(packed_x, num_chunks, 0)
         out = [self.process(chunk) for chunk in chunks]
         encoded = torch.cat(out, 0)
