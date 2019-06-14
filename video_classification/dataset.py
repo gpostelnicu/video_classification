@@ -130,7 +130,7 @@ class VideoFramesDataset(Dataset):
         return x
 
 
-def collate(data, fn_prep_clips):
+def collate(data):
     # Sort the data by the clip length (descending order).
     data.sort(key=lambda x: x[0].size(0), reverse=True)
     clips, labels, weights = zip(*data)
