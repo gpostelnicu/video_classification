@@ -42,7 +42,19 @@ class Decoder(nn.Module):
             dic[STATE] = self.state_dict()
         return dic
 
-    def forward(self, x_seq, x_lens):
+    def forward(self, pack_x):
+        lstm_out, _ = self.lstm(x)
+
+        # Unpack the PackedSequence.
+        unpacked, seq_lens = nn.utils.rnn.pad_packed_sequence(lstm_out, batch_first=True)
+
+        x = unpacked[range(unpacked.size(0)), [i - 1 for i in seq_lens.numpy().tolist()], :]  # Last valid time step.
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc_out(x)
+        return x
+
+    def old_forward(self, x_seq, x_lens):
         # First, pack sequence so that padded items do not get shown to the lstm.
         x = nn.utils.rnn.pack_padded_sequence(x_seq, x_lens, batch_first=True)
 
