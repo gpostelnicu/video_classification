@@ -64,13 +64,14 @@ class ImageEncoder(nn.Module):
         x = self.basenet(x_3d)
 
         s = x.size()
-        x = x.view(s[:-2] + s[-1:])
+        x = x.view(s[:-2] + s[-1:])  # Squeeze singleton penultimate dimension of resnet.
 
-        x = self.bn1(self.fc1(x))
-        x = F.relu(x)
+        # Apply RELU before BatchNorm - having a zero mean implies half the values are negative.
+        x = F.relu(self.fc1(x))
+        x = self.bn1(x)
 
-        x = self.bn2(self.fc2(x))
-        x = F.relu(x)
+        x = F.relu(self.fc2(x))
+        x = self.bn2(x)
 
         x = self.fc3(x)
         return x

@@ -1,8 +1,7 @@
 import torch.nn as nn
 
 from .decoder import Decoder, DecoderConfig
-from .encoder import ResnetEncoder, ResnetEncoderConfig
-
+from .encoder import ResnetEncoder, ResnetEncoderConfig, ImageEncoder
 
 ENCODER = 'encoder'
 DECODER = 'decoder'
@@ -25,7 +24,7 @@ class ResnetLstm(nn.Module):
     def __init__(self, encoder_config, decoder_config):
         super().__init__()
 
-        self.encoder = ResnetEncoder(encoder_config)
+        self.encoder = ImageEncoder(encoder_config)
         self.decoder = Decoder(decoder_config)
 
     @staticmethod
@@ -40,8 +39,8 @@ class ResnetLstm(nn.Module):
         return {ENCODER: self.encoder.to_dict(include_state),
                 DECODER: self.decoder.to_dict(include_state)}
 
-    def forward(self, x_3d, x_len):
-        encoded = self.encoder(x_3d)
-        outputs = self.decoder(encoded, x_len)
+    def forward(self, packed_x):
+        encoded = packed_x._replace(data=self.encoder(packed_x.data))
+        outputs = self.decoder(encoded)
         return outputs
 

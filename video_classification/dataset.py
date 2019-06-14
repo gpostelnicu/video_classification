@@ -1,4 +1,5 @@
 from collections import Counter, namedtuple
+from functools import partial
 import random
 from typing import List
 
@@ -129,7 +130,7 @@ class VideoFramesDataset(Dataset):
         return x
 
 
-def collate_fn(data):
+def collate(data, fn_prep_clips):
     # Sort the data by the clip length (descending order).
     data.sort(key=lambda x: x[0].size(0), reverse=True)
     clips, labels, weights = zip(*data)
@@ -144,7 +145,14 @@ def collate_fn(data):
     return clips, labels, lengths, weights
 
 
-def loader_from_dataset(dataset: Dataset, batch_size: int, shuffle: bool, num_workers: int):
+def loader_from_dataset(dataset: Dataset, batch_size: int, shuffle: bool, num_workers: int,
+                        pack: bool = False):
+    fn_prep_clips = partial(torch.nn.utils.rnn.pad_sequence, batch_first=True)
+    if pack:
+        fn_prep_clips = torch.nn.utils.rnn.pack_sequence
+
+    collate_fn = partial(collate, fn_prep_clips=fn_prep_clips)
+
     loader = DataLoader(
         dataset=dataset,
         batch_size=batch_size,
