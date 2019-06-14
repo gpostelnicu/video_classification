@@ -136,29 +136,21 @@ def collate(data, fn_prep_clips):
     clips, labels, weights = zip(*data)
 
     # Merge images (from tuple of 4D tensor to 5D tensor).
-    lengths = [x.size(0) for x in clips]
-    clips = torch.nn.utils.rnn.pad_sequence(clips, batch_first=True)
+    clips = torch.nn.utils.rnn.pack_sequence(clips)
     labels = torch.stack(labels, 0)
     weights = torch.stack(weights, 0).squeeze()
     weights = weights / weights.sum()
 
-    return clips, labels, lengths, weights
+    return clips, labels, weights
 
 
-def loader_from_dataset(dataset: Dataset, batch_size: int, shuffle: bool, num_workers: int,
-                        pack: bool = False):
-    fn_prep_clips = partial(torch.nn.utils.rnn.pad_sequence, batch_first=True)
-    if pack:
-        fn_prep_clips = torch.nn.utils.rnn.pack_sequence
-
-    collate_fn = partial(collate, fn_prep_clips=fn_prep_clips)
-
+def loader_from_dataset(dataset: Dataset, batch_size: int, shuffle: bool, num_workers: int):
     loader = DataLoader(
         dataset=dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
-        collate_fn=collate_fn,
+        collate_fn=collate,
         pin_memory=True
     )
     return loader
