@@ -17,7 +17,7 @@ NETS = {
 
 ResnetEncoderConfig = namedtuple(
     'ResnetEncoderConfig',
-    'basenet fc1_dim fc2_dim out_dim pretrained image_batch_size'.split())
+    'basenet fc1_dim fc2_dim out_dim pretrained chunk_size'.split())
 
 
 CONFIG = 'config'
