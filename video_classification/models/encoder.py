@@ -60,14 +60,15 @@ class ImageEncoder(nn.Module):
         """
         forward expects a PackedSequence as input.
         """
-        chunks = torch.chunk(packed_x, self.config.image_batch_size, 0)
+        num_chunks = packed_x.size(0) // self.config.chunk_size
+        chunks = torch.chunk(packed_x, num_chunks, 0)
         out = [self.process(chunk) for chunk in chunks]
         encoded = torch.cat(out, 0)
         return encoded
 
     def process(self, x):
         x = self.basenet(x)
-        x = x.squeeze()
+        x = x.view(x.size(0), -1)
 
         # Apply RELU before BatchNorm - having a zero mean implies half the values are negative.
         x = F.relu(self.fc1(x))
