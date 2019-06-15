@@ -9,34 +9,26 @@ from sklearn.metrics import accuracy_score
 import torchvision.transforms as transforms
 from torch import nn
 
+from video_classification.logger import FloydLogger
+from video_classification.models import ResnetLstm, count_params
 from .dataset import VideoFramesDataset, SampledDataset, loader_from_dataset
-from .decoder import Decoder
-from .encoder import ResnetEncoder
-
-
-def count_params(lst_params: list):
-    total_count = 0
-    trainable_count = 0
-    for params in lst_params:
-        np = 1
-        for s in list(params.size()):
-            np *= s
-        total_count += np
-        if params.requires_grad:
-            trainable_count += np
-    return total_count, trainable_count
 
 
 class Trainer(object):
     def __init__(self, base_dir: str,
                  train_list_file: str, test_list_file: str,
                  config_file: str, target_size=224, num_frames=29):
+        self.logger = FloydLogger()
+        model_config = self._load_config(config_file)
+
         # Resnet normalization, see https://github.com/pytorch/vision/issues/39
         basic_tranform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         train_transform = transforms.Compose([
+            transforms.ColorJitter(),
+            transforms.RandomHorizontalFlip(),
             transforms.RandomResizedCrop(target_size, scale=(.9, 1.)),
             basic_tranform
         ])
@@ -46,57 +38,58 @@ class Trainer(object):
         ])
 
         self.train_dataset = VideoFramesDataset.from_list(
-            base_dir=base_dir, fname=train_list_file, num_frames=num_frames, transform=train_transform
+            base_dir=base_dir, fname=train_list_file,
+            max_samples_per_video=self.num_samples_per_folder,
+            target_frames=num_frames, transform=train_transform
         )
+        print('Train dataset stats')
+        self.train_dataset.summary()
 
         self.test_dataset = VideoFramesDataset.from_list(
-            base_dir=base_dir, fname=test_list_file, num_frames=num_frames, transform=eval_transform
+            base_dir=base_dir, fname=test_list_file,
+            max_samples_per_video=self.num_samples_per_folder,
+            target_frames=num_frames, transform=eval_transform
         )
-
-        self._load_config(config_file)
+        print('Test dataset stats')
+        self.test_dataset.summary()
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.encoder = ResnetEncoder(self.encoder_fc_dim1, self.encoder_fc_dim2, self.encoder_out_dim).to(self.device)
-        self.decoder = Decoder(
-            input_dim=self.encoder_out_dim, hidden_dim=self.decoder_hidden_dim,
-            num_hidden_layers=self.decoder_num_hidden_layers, fc_dim=self.decoder_fc_dim,
-            out_dim=self.num_labels
-        ).to(self.device)
+        self.model = ResnetLstm.from_config(model_config)
+        self.model.to(self.device)
 
     def _load_config(self, config_file):
         with open(config_file) as stream:
             config = yaml.safe_load(stream)
+            print('Config: {}'.format(config))
             self.learning_rate = float(config['learning_rate'])  # yaml doesn't seem to parse scientific notation.
             self.batch_size = config['batch_size']
-            self.encoder_fc_dim1 = config['encoder_fc_dim1']
-            self.encoder_fc_dim2 = config['encoder_fc_dim2']
-            self.encoder_out_dim = config['encoder_out_dim']
+            model_config = config['model']
 
-            self.decoder_hidden_dim = config['decoder_hidden_dim']
-            self.decoder_num_hidden_layers = config['decoder_num_hidden_layers']
-            self.decoder_fc_dim = config['decoder_fc_dim']
-            self.num_labels = config['num_labels']
-
-            self.performance_train_max_items = config.get('performance_train_max_items', -1)
+            self.performance_max_items = config.get('performance_max_items', -1)
+            self.num_samples_per_folder = config.get('num_samples_per_folder', 1)
+            return model_config
 
     def peformance(self, dataset, num_workers=0):
-        self.encoder.eval()
-        self.decoder.eval()
+        self.model.eval()
         data_loader = loader_from_dataset(dataset=dataset, batch_size=self.batch_size,
                                           shuffle=False, num_workers=num_workers)
 
         expected = []
         predicted = []
         losses = []
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.CrossEntropyLoss(reduction='none')
         for i, data in enumerate(data_loader):
-            clips, labels, clip_lens = data
-            clips = clips.to(self.device)
+            clip, labels, batch_sizes, weights = data
+            clip = clip.to(self.device)
+            labels = labels.to(self.device)
+            weights = weights.to(self.device)
 
-            output = self.decoder(self.encoder(clips), clip_lens)
+            output = self.model(clip, batch_sizes)
             pred_labels = output.max(1)[1]
-            loss = criterion(output, labels.to(self.device).view(-1, ))
+            loss = criterion(output, labels.view(-1,))
+            loss = loss * weights
+            loss = loss.sum()
 
             expected.extend(labels)
             predicted.extend(pred_labels)
@@ -108,47 +101,51 @@ class Trainer(object):
         loss = np.mean(losses)
         return score, loss
 
-    def train(self, save_prefix, num_epochs, num_workers=0, print_every_n=200):
-        encoder_params = list(self.encoder.parameters())
-        print('Number of encoder total/trainable params: {}'.format(count_params(encoder_params)))
-        decoder_params = list(self.decoder.parameters())
-        print('Number of decoder total/trainable params: {}'.format(count_params(decoder_params)))
+    def train(self, save_fname, num_epochs, num_workers=0, print_every_n=200, max_steps_per_epoch=-1):
+        params = list(self.model.parameters())
+        print('Total/trainable params: {}'.format(count_params(params)))
 
-        optimizer = torch.optim.Adam(encoder_params + decoder_params,
-                                     lr=self.learning_rate)
+        optimizer = torch.optim.Adam(params, lr=self.learning_rate)
+        criterion = nn.CrossEntropyLoss(reduction='none')
 
-        criterion = nn.CrossEntropyLoss()
+        ds = self.train_dataset
+        if max_steps_per_epoch > 0:
+            training_size = max_steps_per_epoch * self.batch_size
+            print('Applying sampling for training dataset size. Size = {}'.format(training_size))
+            ds = SampledDataset(self.train_dataset, training_size)
 
-        train_data_loader = loader_from_dataset(dataset=self.train_dataset, batch_size=self.batch_size,
+        train_data_loader = loader_from_dataset(dataset=ds, batch_size=self.batch_size,
                                                 shuffle=True, num_workers=num_workers)
-        sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
+        sampled_train_ds = SampledDataset(self.train_dataset, self.performance_max_items)
+        sampled_test_ds = SampledDataset(self.test_dataset, self.performance_max_items)
 
-        best = -1.
+        min_loss = 1e9
         for epoch in range(num_epochs):
+            print('Epoch {}'.format(epoch))
             running_loss = 0.0
             count = 0
             start_time = time.time()
-            # Set models in training mode - for batch norm or dropout.
-            self.encoder.train()
-            self.decoder.train()
+
+            self.model.train()  # Set models in training mode - for batch norm or dropout.
 
             for i, data in enumerate(train_data_loader):
-                clips, labels, clip_lens = data
+                clip, labels, batch_sizes, weights = data
                 # Batchnorm fails for a minibatch of 1: https://github.com/pytorch/pytorch/issues/4534
-                if clips.size(0) < 2:
+                if labels.size(0) < 2:
                     print('Encountered minibatch of size 1. Skipping.')
                     continue
-                clips = clips.to(self.device)
+                clip = clip.to(self.device)
                 labels = labels.to(self.device).view(-1,)
+                weights = weights.to(self.device)
 
                 # 1. Clear previously set gradients.
                 optimizer.zero_grad()
 
                 # 2. Forward pass.
-                encoded = self.encoder(clips)
-                pred_labels = self.decoder(encoded, clip_lens)
-
+                pred_labels = self.model(clip, batch_sizes)
                 loss = criterion(pred_labels, labels)
+                loss = loss * weights
+                loss = loss.sum()
 
                 # 3. Backprop.
                 loss.backward()
@@ -159,6 +156,7 @@ class Trainer(object):
                 if (i + 1) % print_every_n == 0:
                     end_time = time.time()
                     delta_seconds = end_time - start_time
+                    self.logger.log("running_loss", running_loss / count)
                     print('epoch {}, step {}: loss {}, total time: {} time per sample: {}'.format(
                         epoch, i, running_loss / count, delta_seconds, delta_seconds / (self.batch_size * count)))
                     running_loss = 0.0
@@ -168,12 +166,14 @@ class Trainer(object):
             print('Computing model performance.')
             with torch.no_grad():
                 train_accuracy, train_loss = self.peformance(sampled_train_ds, num_workers)
-                print('Train performance: accuracy={} loss={}'.format(train_accuracy, train_loss))
-                test_accuracy, test_loss = self.peformance(self.test_dataset, num_workers)
-                print('Test performance: accuracy={} loss={}'.format(test_accuracy, test_loss))
+                self.logger.log("train_accuracy", train_accuracy, epoch)
+                self.logger.log("train_loss", train_loss, epoch)
 
-            if test_accuracy > best:
-                print('Saving')
-                torch.save(self.encoder.state_dict(), '{}_encoder.pth'.format(save_prefix))
-                torch.save(self.decoder.state_dict(), '{}_decoder.pth'.format(save_prefix))
-                best = test_accuracy
+                test_accuracy, test_loss = self.peformance(sampled_test_ds, num_workers)
+                self.logger.log("test_accuracy", test_accuracy, epoch)
+                self.logger.log("test_loss", test_loss, epoch)
+
+                if test_loss < min_loss:
+                    print('Saving')
+                    torch.save(self.model.to_dict(include_state=True), save_fname)
+                    min_loss = test_loss

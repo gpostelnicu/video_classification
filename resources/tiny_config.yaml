@@ -1,0 +1,23 @@
+# Training process
+batch_size: 32
+optimizer: 'adam'
+learning_rate: 1e-4
+
+num_samples_per_folder: 3
+performance_max_items: 1000
+
+model:
+    encoder:
+        basenet: 'resnet50'
+        fc1_dim: 256
+        fc2_dim: 256
+        out_dim: 128
+        pretrained: True
+        chunk_size: 256
+
+    decoder:
+        input_dim: 128
+        hidden_dim: 256
+        num_hidden_layers: 2
+        fc_dim: 128
+        out_dim: 101

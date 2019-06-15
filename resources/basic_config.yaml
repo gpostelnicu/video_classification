@@ -3,16 +3,15 @@ batch_size: 64
 optimizer: 'adam'
 learning_rate: 1e-4
 
-# Network parameters
-decoder_hidden_dim: 512
-decoder_num_hidden_layers: 3
-decoder_fc_dim: 128
-
-encoder_fc_dim1: 512
-encoder_fc_dim2: 512
-encoder_out_dim: 300
-
-num_labels: 101
-
 performance_train_max_items: 1000
 
+model:
+    encoder_fc_dim1: 512
+    encoder_fc_dim2: 512
+    encoder_out_dim: 300
+
+    decoder_hidden_dim: 512
+    decoder_num_hidden_layers: 3
+    decoder_fc_dim: 128
+
+    num_labels: 101
