@@ -66,7 +66,7 @@ class Trainer(object):
             self.batch_size = config['batch_size']
             model_config = config['model']
 
-            self.performance_train_max_items = config.get('performance_train_max_items', -1)
+            self.performance_max_items = config.get('performance_max_items', -1)
             self.num_samples_per_folder = config.get('num_samples_per_folder', 1)
             return model_config
 
@@ -116,7 +116,8 @@ class Trainer(object):
 
         train_data_loader = loader_from_dataset(dataset=ds, batch_size=self.batch_size,
                                                 shuffle=True, num_workers=num_workers)
-        sampled_train_ds = SampledDataset(self.train_dataset, self.performance_train_max_items)
+        sampled_train_ds = SampledDataset(self.train_dataset, self.performance_max_items)
+        sampled_test_ds = SampledDataset(self.test_dataset, self.performance_max_items)
 
         min_loss = 1e9
         for epoch in range(num_epochs):
@@ -168,11 +169,11 @@ class Trainer(object):
                 self.logger.log("train_accuracy", train_accuracy, epoch)
                 self.logger.log("train_loss", train_loss, epoch)
 
-                test_accuracy, test_loss = self.peformance(self.test_dataset, num_workers)
+                test_accuracy, test_loss = self.peformance(sampled_test_ds, num_workers)
                 self.logger.log("test_accuracy", test_accuracy, epoch)
                 self.logger.log("test_loss", test_loss, epoch)
 
-                if test_loss > min_loss:
+                if test_loss < min_loss:
                     print('Saving')
                     torch.save(self.model.to_dict(include_state=True), save_fname)
                     min_loss = test_loss
