@@ -1,12 +1,13 @@
 # Training process
 batch_size: 32
 optimizer: 'adam'
-learning_rate: 1e-4
+learning_rate: 1e-3
 
 num_samples_per_folder: 3
 performance_max_items: 1000
 
 model:
+    model_class: 'resnet_lstm'
     encoder:
         basenet: 'resnet50'
         fc1_dim: 256

@@ -10,7 +10,7 @@ import torchvision.transforms as transforms
 from torch import nn
 
 from video_classification.logger import FloydLogger
-from video_classification.models import ResnetLstm, count_params
+from video_classification.models import get_model_by_name, count_params
 from .dataset import VideoFramesDataset, SampledDataset, loader_from_dataset
 
 
@@ -55,7 +55,7 @@ class Trainer(object):
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.model = ResnetLstm.from_config(model_config)
+        self.model = get_model_by_name(model_config)
         self.model.to(self.device)
 
     def _load_config(self, config_file):
