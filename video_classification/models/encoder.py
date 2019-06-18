@@ -55,8 +55,9 @@ class ImageEncoder(SavingModule):
         trainable_prefixes = set()
         if config.trainable_prefixes:
             trainable_prefixes = set(n for n in config.trainable_prefixes)
-        for n, p in self.basenet.named_parameters():  # Only finetuning, disable training for the base net.
+        for n, p in basenet.named_parameters():  # Only finetuning, disable training for the base net.
             if n.split('.')[0] not in trainable_prefixes:
+                print('Setting as non trainable params name {}'.format(n))
                 p.requires_grad = False
             else:
                 print('Setting as trainable params name {}'.format(n))
