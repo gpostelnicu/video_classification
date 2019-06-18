@@ -7,6 +7,6 @@ PYTHONPATH=`pwd` python bin/train.py \
     --config resources/small_config.yaml \
     --save_file /output/small.pth \
     --num_epochs 10 \
-    --num_workers 4 \
+    --num_workers 2 \
     --print_every_n 10 \
     --num_frames 29

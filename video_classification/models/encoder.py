@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import PackedSequence
 from torchvision import models
 
+from video_classification.models.saving_module import SavingModule
 
 NETS = {
     'resnet18': models.resnet18,
@@ -20,11 +21,9 @@ ResnetEncoderConfig = namedtuple(
     'basenet fc1_dim fc2_dim out_dim pretrained chunk_size'.split())
 
 
-CONFIG = 'config'
-STATE = 'state'
+class ImageEncoder(SavingModule):
+    config_cls = ResnetEncoderConfig
 
-
-class ImageEncoder(nn.Module):
     def __init__(self, config: ResnetEncoderConfig):
         super().__init__()
         self.config = config
@@ -40,21 +39,6 @@ class ImageEncoder(nn.Module):
         self.fc2 = nn.Linear(config.fc1_dim, config.fc2_dim)
         self.bn2 = nn.BatchNorm1d(config.fc2_dim, momentum=0.1)
         self.fc3 = nn.Linear(config.fc2_dim, config.out_dim)
-
-    @staticmethod
-    def from_dict(checkpoint: dict):
-        assert CONFIG in checkpoint
-        config = ResnetEncoderConfig(**checkpoint[CONFIG])
-        encoder = ResnetEncoder(config)
-        assert STATE in checkpoint
-        encoder.load_state_dict(checkpoint[STATE])
-        return encoder
-
-    def to_dict(self, include_state=True):
-        dic = {CONFIG: dict(self.config._asdict())}
-        if include_state:
-            dic[STATE] = self.state_dict()
-        return dic
 
     def forward(self, packed_x):
         """
@@ -81,7 +65,9 @@ class ImageEncoder(nn.Module):
         return x
 
 
-class ResnetEncoder(nn.Module):
+class ResnetEncoder(SavingModule):
+    config_cls = ResnetEncoderConfig
+
     def __init__(self, config: ResnetEncoderConfig):
         super().__init__()
 
@@ -98,21 +84,6 @@ class ResnetEncoder(nn.Module):
         self.fc2 = nn.Linear(config.fc1_dim, config.fc2_dim)
         self.bn2 = nn.BatchNorm1d(config.fc2_dim, momentum=0.1)
         self.fc3 = nn.Linear(config.fc2_dim, config.out_dim)
-
-    @staticmethod
-    def from_dict(checkpoint: dict):
-        assert CONFIG in checkpoint
-        config = ResnetEncoderConfig(**checkpoint[CONFIG])
-        encoder = ResnetEncoder(config)
-        assert STATE in checkpoint
-        encoder.load_state_dict(checkpoint[STATE])
-        return encoder
-
-    def to_dict(self, include_state=True):
-        dic = {CONFIG: dict(self.config._asdict())}
-        if include_state:
-            dic[STATE] = self.state_dict()
-        return dic
 
     def forward(self, x_3d):
         cnn_seq = []

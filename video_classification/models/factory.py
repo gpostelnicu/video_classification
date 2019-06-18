@@ -10,4 +10,4 @@ MODELS = {
 
 
 def get_model_by_name(config):
-    return MODELS[config[KEY]](config)
+    return MODELS[config[KEY]].from_config(config)
