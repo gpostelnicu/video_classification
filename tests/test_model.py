@@ -18,3 +18,9 @@ def test_model_save_load():
     dic = model.to_dict(include_state=False)
     assert filter_null_items(dic['encoder']['config']) == filter_null_items(config['model']['encoder'])
     assert filter_null_items(dic['decoder']['config']) == filter_null_items(config['model']['decoder'])
+
+
+def test_model_create_2():
+    config = yaml.safe_load(open('tests/resources/test_config_2.yaml'))
+    model = get_model_by_name(config['model'])
+    assert model is not None
